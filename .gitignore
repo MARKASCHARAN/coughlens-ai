@@ -1,0 +1,47 @@
+# env files
+.env
+.env.*
+.env.example
+
+# node
+node_modules/
+
+# python
+__pycache__/
+venv/
+*.pyc
+
+# ML
+*.h5
+*.pt
+*.pkl
+models/
+
+# build
+dist/
+build/
+
+# mac
+.DS_Store
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Env
+.env
+
+# Node
+node_modules/
+
+# OS
+.DS_Store
+
+# ML
+*.pth
+*.pt
+data/processed/
+
+# Logs
+*.log
