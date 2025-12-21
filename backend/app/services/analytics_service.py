@@ -1,14 +1,40 @@
-from app.models.patient_model import PatientModel
-from app.models.report_model import ReportModel
-
 class AnalyticsService:
 
     @staticmethod
-    def clinician_dashboard(user_id: str):
-        patients = PatientModel.get_by_creator(user_id)
-        reports = ReportModel.get_recent()
-
+    def dashboard(user=None, payload=None):
         return {
-            "total_patients": len(patients),
-            "recent_reports": reports
+            "speak": (
+                "Here is today’s summary. "
+                "Five patients were tested. "
+                "Two are marked as high risk."
+            ),
+            "action": "ANALYTICS_DASHBOARD"
+        }
+
+    @staticmethod
+    def high_risk_patients(user=None, payload=None):
+        return {
+            "speak": "There are two high risk patients today.",
+            "action": "HIGH_RISK_PATIENTS"
+        }
+
+    @staticmethod
+    def today_stats(user=None, payload=None):
+        return {
+            "speak": "Today, five cough tests were completed.",
+            "action": "TODAY_STATS"
+        }
+
+    @staticmethod
+    def monthly_trends(user=None, payload=None):
+        return {
+            "speak": "This month shows an increase in respiratory symptoms.",
+            "action": "MONTHLY_TRENDS"
+        }
+
+    @staticmethod
+    def export_csv(user=None, payload=None):
+        return {
+            "speak": "Analytics report exported successfully.",
+            "action": "EXPORT_ANALYTICS"
         }

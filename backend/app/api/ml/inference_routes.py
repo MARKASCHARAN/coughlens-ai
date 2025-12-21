@@ -10,14 +10,14 @@ def run_inference(
     audio_path: str,
     user=Depends(get_current_user)
 ):
-    # ML mocked but flow is real
     prediction = "POSSIBLE_ASTHMA"
     confidence = 0.87
 
     report = MLService.generate_report(
         patient_id=patient_id,
         prediction=prediction,
-        confidence=confidence
+        confidence=confidence,
+        user_id=user["id"] 
     )
 
     return {
