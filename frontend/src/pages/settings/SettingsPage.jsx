@@ -1,0 +1,102 @@
+import { 
+    Globe, 
+    Bell, 
+    Mic, 
+    User, 
+    Shield, 
+    LogOut 
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function SettingsPage() {
+    return (
+        <div className="space-y-8 max-w-4xl">
+            <header>
+                <h1 className="text-3xl font-bold text-slate-900">Settings</h1>
+                <p className="text-slate-500 mt-1">Manage your preferences and profile</p>
+            </header>
+
+            <div className="space-y-6">
+                
+                {/* Language & Voice */}
+                <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+                         <Globe className="w-5 h-5 text-blue-600" />
+                         <h3 className="font-bold text-slate-900">Language & Region</h3>
+                    </div>
+                    <div className="p-6 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h4 className="font-medium text-slate-900">App Language</h4>
+                                <p className="text-sm text-slate-500">Select your preferred language</p>
+                            </div>
+                            <select className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-2 font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                                <option>English</option>
+                                <option>Hindi</option>
+                                <option>Telugu</option>
+                            </select>
+                        </div>
+                         <div className="flex items-center justify-between">
+                            <div>
+                                <h4 className="font-medium text-slate-900">Voice Assistant</h4>
+                                <p className="text-sm text-slate-500">Enable voice commands and navigation</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" className="sr-only peer" defaultChecked />
+                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Profile */}
+                <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
+                         <User className="w-5 h-5 text-blue-600" />
+                         <h3 className="font-bold text-slate-900">Provider Profile</h3>
+                    </div>
+                    <div className="p-6 space-y-6">
+                        <div className="flex items-center gap-6">
+                            <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                                <User className="w-8 h-8" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-lg text-slate-900">Dr. Salthi</h4>
+                                <p className="text-slate-500">Clinician ID: #88392</p>
+                            </div>
+                            <button className="ml-auto px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
+                                Edit
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                 <div className="grid md:grid-cols-2 gap-6">
+                     <button className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                             <div className="p-2 rounded-lg bg-orange-50 text-orange-600">
+                                <Bell className="w-5 h-5" />
+                             </div>
+                             <span className="font-medium text-slate-900">Notifications</span>
+                        </div>
+                        <span className="text-slate-400 group-hover:text-blue-600 transition-colors">On</span>
+                     </button>
+                      <button className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm flex items-center justify-between group hover:border-blue-200 transition-colors">
+                        <div className="flex items-center gap-3">
+                             <div className="p-2 rounded-lg bg-green-50 text-green-600">
+                                <Shield className="w-5 h-5" />
+                             </div>
+                             <span className="font-medium text-slate-900">Security & Privacy</span>
+                        </div>
+                     </button>
+                 </div>
+
+                 <button className="w-full p-4 rounded-2xl bg-red-50 text-red-600 font-bold flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
+                    <LogOut className="w-5 h-5" />
+                    <span>Log Out</span>
+                 </button>
+
+            </div>
+        </div>
+    );
+}
