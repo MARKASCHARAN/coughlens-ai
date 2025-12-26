@@ -16,7 +16,7 @@ def generate_report(
     patient_id: str,
     user=Depends(get_current_user)
 ):
-    require_role("INDIVIDUAL", "ASHA_WORKER")(user)  # 🔒 FIXED
+    require_role("INDIVIDUAL", "ASHA_WORKER", "CLINICIAN")(user)  # 🔒 FIXED
 
     report = MLService.generate_report(
         patient_id=patient_id,

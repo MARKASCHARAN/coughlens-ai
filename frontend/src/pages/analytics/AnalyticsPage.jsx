@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { 
     BarChart3, 
@@ -8,8 +10,23 @@ import {
     ArrowUpRight,
     ArrowDownRight
 } from "lucide-react";
+import { useUser } from "../../context/UserContext";
 
 export default function AnalyticsPage() {
+    const { user } = useUser();
+    const role = user?.role || "INDIVIDUAL";
+    const navigate = useNavigate();
+
+    // Redirect INDIVIDUAL users
+    useEffect(() => {
+        if (role === "INDIVIDUAL") {
+            navigate("/dashboard");
+        }
+    }, [role, navigate]);
+
+    // If redirecting, don't render content
+    if (role === "INDIVIDUAL") return null;
+
     return (
         <div className="space-y-8">
             <header>

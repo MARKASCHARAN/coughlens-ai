@@ -6,7 +6,7 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
 @router.get("/dashboard")
 def dashboard(user=Depends(get_current_user)):
-    require_role("CLINICIAN")(user)
+    require_role("CLINICIAN", "ASHA_WORKER")(user)
     return {
         "status": "ok",
         "message": "Clinician analytics"

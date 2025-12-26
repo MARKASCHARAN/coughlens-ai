@@ -1,4 +1,5 @@
-import { useParams, Link } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { 
     User, 
     Phone, 
@@ -11,6 +12,7 @@ import {
     Clock,
     AlertTriangle
 } from "lucide-react";
+import { useUser } from "../../context/UserContext";
 
 // Mock Data
 const MOCK_PATIENT_DETAILS = {
@@ -29,9 +31,23 @@ const MOCK_PATIENT_DETAILS = {
 };
 
 export default function PatientProfilePage() {
+    const { user } = useUser();
+    const role = user?.role || "INDIVIDUAL";
+    const navigate = useNavigate();
+
+    // Redirect INDIVIDUAL users
+    useEffect(() => {
+        if (role === "INDIVIDUAL") {
+            navigate("/dashboard");
+        }
+    }, [role, navigate]);
+
     const { id } = useParams();
     // In real app, fetch patient by ID. Using mock for now.
     const patient = MOCK_PATIENT_DETAILS; 
+    
+    // If redirecting, don't render content
+    if (role === "INDIVIDUAL") return null;
 
     return (
         <div className="space-y-8">

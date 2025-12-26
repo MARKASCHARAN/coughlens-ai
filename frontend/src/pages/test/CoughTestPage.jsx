@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { 
     Mic, 
@@ -7,47 +7,63 @@ import {
     Upload, 
     ChevronLeft, 
     Activity, 
-    AlertCircle,
     CheckCircle2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useVoice } from "../../context/VoiceContext";
+import { useUser } from "../../context/UserContext";
 
 export default function CoughTestPage() {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1); // 1: Info, 2: Recording, 3: Review, 4: Uploading
-    const [isRecording, setIsRecording] = useState(false);
+    const { startRecording, stopRecording, status, level, setMode, analyzeCough, recordedBlob, lastRecordingId } = useVoice();
+    const { user } = useUser();
+    
+    // UI steps: 1: Info, 2: Recording, 3: Review, 4: Uploading
+    const [step, setStep] = useState(1); 
     const [recordingTime, setRecordingTime] = useState(0);
-    const timerRef = useRef(null);
 
-    // Mock Timer Logic
+    // Initial Setup
     useEffect(() => {
-        if (isRecording) {
-            timerRef.current = setInterval(() => {
+        setMode("COUGH_TEST");
+        return () => setMode("COMMAND");
+    }, [setMode]);
+
+    // Timer Logic relying on status from Context
+    useEffect(() => {
+        let interval;
+        if (status === "listening") {
+            interval = setInterval(() => {
                 setRecordingTime(prev => prev + 1);
             }, 1000);
         } else {
-            clearInterval(timerRef.current);
+            clearInterval(interval);
         }
-        return () => clearInterval(timerRef.current);
-    }, [isRecording]);
+        return () => clearInterval(interval);
+    }, [status]);
 
     const handleStartRecording = () => {
         setStep(2);
-        setIsRecording(true);
         setRecordingTime(0);
+        // Use phone as patient ID for now
+        startRecording(user?.phone || "test-patient"); 
     };
 
     const handleStopRecording = () => {
-        setIsRecording(false);
-        setStep(3);
+        stopRecording();
+        setStep(3); // Move to review
     };
 
-    const handleUpload = () => {
+    const handleUpload = async () => {
         setStep(4);
-        // Simulate upload delay then redirect
-        setTimeout(() => {
-            navigate("/reports/new-report-id");
-        }, 2000);
+        const result = await analyzeCough();
+        if (result) {
+            // Success
+            navigate(`/reports/${result.report_id || lastRecordingId}`); // Navigate to report
+        } else {
+            // Error handling (stay on step 4 or go back)
+            alert("Analysis failed. Please try again.");
+            setStep(3);
+        }
     };
 
     const formatTime = (seconds) => {
@@ -119,15 +135,14 @@ export default function CoughTestPage() {
                                     {formatTime(recordingTime)}
                                 </div>
                                 
-                                {/* Visualizer Mock */}
+                                {/* Visualizer Mock based on level */}
                                 <div className="h-24 flex items-center justify-center gap-1 mb-10 w-full max-w-md mx-auto">
                                     {[...Array(20)].map((_, i) => (
                                         <div 
                                             key={i} 
-                                            className="w-2 bg-slate-900 rounded-full animate-[bounce_1s_infinite]"
+                                            className="w-2 bg-slate-900 rounded-full transition-all duration-75"
                                             style={{ 
-                                                height: `${Math.max(20, Math.random() * 100)}%`,
-                                                animationDelay: `${i * 0.05}s` 
+                                                height: `${Math.max(20, (level / 255) * 100 * (Math.random() + 0.5))}%`,
                                             }} 
                                         />
                                     ))}
@@ -159,6 +174,10 @@ export default function CoughTestPage() {
                             <h1 className="text-2xl font-bold text-slate-900 mb-2">Recording Complete</h1>
                             <p className="text-slate-500 mb-8">Duration: {formatTime(recordingTime)}</p>
                             
+                            {recordedBlob && (
+                                <audio controls src={URL.createObjectURL(recordedBlob)} className="w-full mb-6" />
+                            )}
+
                             <div className="flex flex-col gap-3 max-w-xs mx-auto">
                                 <button 
                                     onClick={handleUpload}
@@ -168,7 +187,11 @@ export default function CoughTestPage() {
                                     <span>Upload & Analyze</span>
                                 </button>
                                 <button 
-                                    onClick={() => setStep(1)} // Reset
+                                    onClick={() => {
+                                        setStep(2); // Go back to recording step
+                                        // Auto start? Maybe not to avoid confusion, just let them press start again or reset to step 1
+                                        setStep(1);
+                                    }} 
                                     className="px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 flex items-center justify-center gap-2 transition-all"
                                 >
                                     <RotateCcw className="w-5 h-5" />

@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Search, Plus, Filter, Mic, ChevronRight, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "../../lib/utils";
+import { useUser } from "../../context/UserContext";
 
 // Mock Data
 const MOCK_PATIENTS = [
@@ -14,12 +15,26 @@ const MOCK_PATIENTS = [
 ];
 
 export default function PatientListPage() {
+    const { user } = useUser();
+    const role = user?.role || "INDIVIDUAL";
+    const navigate = useNavigate();
+    
+    // Redirect INDIVIDUAL users
+    useEffect(() => {
+        if (role === "INDIVIDUAL") {
+            navigate("/dashboard");
+        }
+    }, [role, navigate]);
+
     const [searchQuery, setSearchQuery] = useState("");
 
     const filteredPatients = MOCK_PATIENTS.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
         p.village.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    
+    // If redirecting, don't render content
+    if (role === "INDIVIDUAL") return null;
 
     return (
         <div className="space-y-8">

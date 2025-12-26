@@ -1,6 +1,9 @@
+# app/services/otp_service.py
+
 import random
+import bcrypt
 from datetime import datetime, timedelta
-from app.config.database import db
+from app.config.database import otp_collection
 
 class OTPService:
 
@@ -9,26 +12,43 @@ class OTPService:
         return str(random.randint(100000, 999999))
 
     @staticmethod
-    def save_otp(phone: str, otp: str, role: str):
-        db.otp_sessions.delete_many({"phone": phone})
+    def hash_otp(otp: str):
+        return bcrypt.hashpw(otp.encode(), bcrypt.gensalt()).decode()
 
-        db.otp_sessions.insert_one({
-            "phone": phone,
-            "otp": otp,
+    @staticmethod
+    def verify_hash(otp: str, otp_hash: str):
+        return bcrypt.checkpw(otp.encode(), otp_hash.encode())
+
+    @staticmethod
+    def save_otp(identifier: str, otp: str, role: str, channel: str):
+        otp_collection.insert_one({
+            "identifier": identifier,          # phone OR email
+            "channel": channel,                # EMAIL | WHATSAPP
+            "otp_hash": OTPService.hash_otp(otp),
             "role": role,
-            "expires_at": datetime.utcnow() + timedelta(minutes=5)
+            "verified": False,
+            "expires_at": datetime.utcnow() + timedelta(minutes=5),
+            "created_at": datetime.utcnow()
         })
 
     @staticmethod
-    def verify_otp(phone: str, otp: str):
-        record = db.otp_sessions.find_one({
-            "phone": phone,
-            "otp": otp,
+    def verify_otp(identifier: str, otp: str, channel: str):
+        record = otp_collection.find_one({
+            "identifier": identifier,
+            "channel": channel,                # 🔐 CRITICAL FIX
+            "verified": False,
             "expires_at": {"$gt": datetime.utcnow()}
         })
 
         if not record:
             return None
 
-        db.otp_sessions.delete_one({"_id": record["_id"]})
+        if not OTPService.verify_hash(otp, record["otp_hash"]):
+            return None
+
+        otp_collection.update_one(
+            {"_id": record["_id"]},
+            {"$set": {"verified": True}}
+        )
+
         return record

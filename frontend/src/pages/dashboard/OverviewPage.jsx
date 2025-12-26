@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { 
     Activity, 
@@ -9,246 +10,247 @@ import {
     Microscope, 
     BarChart3,
     Clock,
-    Shield
+    Shield,
+    Database,
+    Zap,
+    Play
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
-
-// MOCK ROLE FOR DEVELOPMENT
-// OPTIONS: "INDIVIDUAL", "ASHA_WORKER", "CLINICIAN"
-const USER_ROLE = "ASHA_WORKER"; 
+import { useUser } from "../../context/UserContext";
+// import { reportsService } from "../../services/reports";
+import { analyticsService } from "../../services/analytics";
 
 export default function OverviewPage() {
+    const { user } = useUser();
+    const role = user?.role || "INDIVIDUAL"; 
+    
+    // State for dashboard data
+    const [stats, setStats] = useState(null);
+    const [reports, setReports] = useState([]);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                if (role === "CLINICIAN") {
+                    const data = await analyticsService.getDashboard();
+                    setStats(data);
+                } else if (role === "INDIVIDUAL") {
+                    // Mock data for demo
+                    setReports([
+                         { id: 1, date: "2024-12-20", prediction: "Healthy", confidence: 0.98, ipfs_cid: "QmX...", audio_url: "#" },
+                         { id: 2, date: "2024-12-05", prediction: "Potential Asthma", confidence: 0.72, ipfs_cid: "QmY...", audio_url: "#" }
+                    ]);
+                }
+            } catch (error) {
+                console.error("Dashboard data load failed", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [role, user]);
+
     return (
         <div className="space-y-8">
-            <header className="flex justify-between items-center">
+            <header className="flex justify-between items-end pb-4 border-b border-slate-200/50">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
-                    <p className="text-slate-500 mt-1">
-                        {USER_ROLE === "INDIVIDUAL" && "Welcome back, Priya"}
-                        {USER_ROLE === "ASHA_WORKER" && "Welcome back, ASHA Worker Lakshmi"}
-                        {USER_ROLE === "CLINICIAN" && "Welcome back, Dr. Salthi"}
-                    </p>
+                     <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+                        Dashboard
+                        <span className="text-blue-600">.</span>
+                     </h1>
+                     <p className="text-slate-500 font-medium mt-2">
+                        Overview & Real-time Analytics
+                     </p>
                 </div>
-                <div className="flex items-center gap-2">
-                     <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                        {USER_ROLE.replace("_", " ")} VIEW
+                <div className="hidden md:flex items-center gap-3">
+                     <span className="px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-600 text-xs font-bold shadow-sm uppercase tracking-wider">
+                        {role.replace("_", " ")} VIEW
                      </span>
+                     <div className="text-right">
+                         <div className="text-xs font-bold text-slate-400">CURRENT DATE</div>
+                         <div className="text-sm font-bold text-slate-900">
+                            {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' })}
+                         </div>
+                     </div>
                 </div>
             </header>
 
-            {USER_ROLE === "INDIVIDUAL" && <IndividualDashboard />}
-            {USER_ROLE === "ASHA_WORKER" && <AshaDashboard />}
-            {USER_ROLE === "CLINICIAN" && <ClinicianDashboard />}
+            {role === "INDIVIDUAL" && <IndividualDashboard reports={reports} user={user} />}
+            {role === "ASHA_WORKER" && <AshaDashboard />}
+            {role === "CLINICIAN" && <ClinicianDashboard stats={stats} />}
 
         </div>
     )
 }
 
 // ----------------------------------------------------------------------
-// 👤 INDIVIDUAL USER DASHBOARD
+// 👤 INDIVIDUAL USER DASHBOARD (FUTURISTIC)
 // ----------------------------------------------------------------------
-function IndividualDashboard() {
+function IndividualDashboard({ reports, user }) {
     return (
-        <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatCard 
-                    title="Last Test Result" 
-                    value="Healthy" 
-                    icon={<Activity className="w-5 h-5 text-green-600" />}
-                    color="bg-green-50 text-green-700"
-                />
-                <StatCard 
-                    title="Risk Status" 
-                    value="Low Risk" 
-                    icon={<Shield className="w-5 h-5 text-blue-600" />}
-                    color="bg-blue-50 text-blue-700"
-                />
-                 <StatCard 
-                    title="Next Check-up" 
-                    value="15 Days" 
-                    icon={<Clock className="w-5 h-5 text-purple-600" />}
-                    color="bg-purple-50 text-purple-700"
-                />
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+        >
+            {/* Hero Welcome */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-slate-900 p-8 md:p-12 text-white shadow-2xl shadow-blue-900/20">
+                <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+                     <Activity className="w-64 h-64 text-white" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20" />
+                
+                <div className="relative z-10 max-w-2xl">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                        Hello, {user?.phone || "User"}
+                    </h2>
+                    <p className="text-blue-100 text-lg md:text-xl font-medium mb-8 leading-relaxed opacity-90">
+                        Your respiratory health is stable. Tap the microphone to start a new assessment or ask about your history.
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-4">
+                        <Link to="/test/cough" className="px-8 py-4 rounded-2xl bg-white text-blue-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm uppercase tracking-wide flex items-center gap-2">
+                             <Zap className="w-4 h-4 text-orange-500 fill-orange-500" />
+                             Start Diagnostic
+                        </Link>
+                         <button className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-bold hover:bg-white/20 transition-all text-sm uppercase tracking-wide backdrop-blur-md">
+                             Voice Assistant
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
-                <DashboardPanel title="Recent Reports">
-                     <div className="space-y-4">
-                        {[1,2,3].map((i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-md transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                                        <FileText className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold text-slate-900">Cough Analysis Report</h4>
-                                        <p className="text-xs text-slate-500">Dec {10 + i}, 2024</p>
-                                    </div>
-                                </div>
-                                <span className="px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-medium">
-                                    Normal
-                                </span>
-                            </div>
-                        ))}
+            {/* Futuristic Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {/* Health Score Ring */}
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white flex items-center justify-between relative overflow-hidden group">
+                     <div>
+                         <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Health Score</h3>
+                         <div className="text-4xl font-extrabold text-slate-900">92<span className="text-lg text-slate-400">/100</span></div>
+                         <div className="mt-2 inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-50 text-green-700 text-xs font-bold">
+                             <TrendingUp className="w-3 h-3" /> Still Improving
+                         </div>
                      </div>
-                </DashboardPanel>
-                 <DashboardPanel title="Quick Actions">
-                    <div className="grid gap-4">
-                        <Link to="/test/cough" className="p-4 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-between group">
-                            <div className="flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-                                    <Activity className="w-6 h-6" />
+                     <div className="relative w-24 h-24 flex items-center justify-center">
+                         <svg className="w-full h-full transform -rotate-90">
+                             <circle cx="48" cy="48" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-100" />
+                             <circle cx="48" cy="48" r="36" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray="226" strokeDashoffset="40" className="text-green-500" />
+                         </svg>
+                         <Activity className="w-8 h-8 text-green-500 absolute" />
+                     </div>
+                 </motion.div>
+
+                  {/* Last Assessment */}
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <div className="flex justify-between items-start mb-4">
+                         <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                             <Microscope className="w-6 h-6" />
+                         </div>
+                         <span className="text-xs font-bold text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">3 DAYS AGO</span>
+                     </div>
+                     <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Last Result</h3>
+                     <div className="text-2xl font-bold text-slate-900">Healthy Lungs</div>
+                     <p className="text-slate-400 text-sm mt-1">No anomalies detected in MFCC.</p>
+                 </motion.div>
+
+                  {/* Secure Storage */}
+                 <motion.div whileHover={{ y: -5 }} className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 rounded-[2rem] shadow-xl shadow-indigo-500/20 text-white relative overflow-hidden group">
+                     <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none transform translate-x-4 -translate-y-4">
+                         <Database className="w-32 h-32" />
+                     </div>
+                     <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-6">
+                            <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl">
+                                <Shield className="w-6 h-6 text-white" />
+                            </div>
+                            <span className="px-3 py-1 rounded-full bg-green-400/20 text-green-300 border border-green-400/30 text-xs font-bold flex items-center gap-1">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                                SECURE
+                            </span>
+                        </div>
+                        <h3 className="font-bold text-white/80 text-sm uppercase tracking-wider mb-1">Data Storage</h3>
+                        <div className="text-2xl font-bold">IPFS Network</div>
+                        <p className="text-white/70 text-sm mt-1">Decentralized & Immutable Records</p>
+                     </div>
+                 </motion.div>
+            </div>
+
+            {/* Recent History */}
+            <DashboardPanel title="Recent Diagnostics History">
+                <div className="space-y-4">
+                    {reports.length > 0 ? reports.map((rpt, i) => (
+                        <div key={rpt._id || i} className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-3xl bg-slate-50 border border-slate-100 group hover:bg-white hover:shadow-lg hover:shadow-slate-200/50 transition-all duration-300">
+                            <div className="flex items-center gap-5">
+                                <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center shadow-inner", 
+                                    rpt.prediction === "Healthy" ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600"
+                                )}>
+                                    <Activity className="w-7 h-7" />
                                 </div>
                                 <div>
-                                    <h3 className="font-bold text-lg">Start New Test</h3>
-                                    <p className="text-blue-100 text-sm">Check your cough health now</p>
+                                    <h4 className="font-exhibit font-bold text-lg text-slate-900 flex items-center gap-3">
+                                        {rpt.prediction}
+                                        {rpt.confidence > 0.8 && rpt.prediction !== "Healthy" && (
+                                            <span className="px-2 py-0.5 rounded-md bg-red-100 text-red-700 text-[10px] font-extrabold uppercase tracking-wide">High Confidence</span>
+                                        )}
+                                    </h4>
+                                    <div className="flex items-center gap-3 mt-1 text-xs font-bold text-slate-400 uppercase tracking-wide">
+                                        <span>{rpt.date}</span>
+                                        <span className="w-1 h-1 rounded-full bg-slate-300" />
+                                        <span className="flex items-center gap-1 text-indigo-500">
+                                            <Database className="w-3 h-3" /> IPFS: {rpt.ipfs_cid.substring(0,6)}...
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </Link>
-                    </div>
-                </DashboardPanel>
-            </div>
-        </>
-    )
-}
 
-// ----------------------------------------------------------------------
-// 🧑‍⚕️ ASHA WORKER DASHBOARD
-// ----------------------------------------------------------------------
-function AshaDashboard() {
-    return (
-        <>
-             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatCard 
-                    title="Total Patients" 
-                    value="124" 
-                    icon={<Users className="w-5 h-5 text-blue-600" />}
-                    color="bg-blue-50 text-blue-700"
-                />
-                 <StatCard 
-                    title="Tests Today" 
-                    value="8" 
-                    icon={<Activity className="w-5 h-5 text-indigo-600" />}
-                    color="bg-indigo-50 text-indigo-700"
-                />
-                 <StatCard 
-                    title="High Risk Alerts" 
-                    value="3" 
-                    icon={<AlertTriangle className="w-5 h-5 text-red-600" />}
-                    color="bg-red-50 text-red-700"
-                />
-                <motion.div 
-                    whileHover={{ y: -4 }}
-                    className="p-6 rounded-[2rem] bg-slate-900 text-white shadow-xl cursor-pointer flex flex-col justify-center items-center gap-3 text-center"
-                >
-                    <UserPlus className="w-8 h-8 opacity-80" />
-                    <span className="font-bold">Add New Patient</span>
-                </motion.div>
-            </div>
-
-             <div className="grid lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                    <DashboardPanel title="Today's Schedule / Activity">
-                        <div className="space-y-3">
-                             {/* Mock List */}
-                             {[1,2,3,4].map((i) => (
-                                <div key={i} className="flex items-center justify-between p-3 rounded-lg hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-500 text-xs">
-                                            P{i}
-                                        </div>
-                                        <div>
-                                            <div className="font-medium text-slate-900">Patient #{100+i}</div>
-                                            <div className="text-xs text-slate-500">Village Sector 4 • Checked 2h ago</div>
-                                        </div>
-                                    </div>
-                                    <span className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded-md">View</span>
-                                </div>
-                             ))}
-                        </div>
-                    </DashboardPanel>
-                </div>
-                 <div className="lg:col-span-1">
-                    <DashboardPanel title="High Risk Cases">
-                        <div className="space-y-3">
-                            <div className="p-3 bg-red-50 rounded-xl border border-red-100">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <AlertTriangle className="w-4 h-4 text-red-600" />
-                                    <span className="text-sm font-bold text-red-700">Immediate Attention</span>
-                                </div>
-                                <p className="text-xs text-red-600 mb-2">Ramesh Kumar (65M) shows signs of severe respiratory distress.</p>
-                                <button className="w-full py-1.5 bg-white border border-red-200 text-red-700 text-xs font-bold rounded-lg hover:bg-red-600 hover:text-white transition-colors">
-                                    Contact Hospital
+                            <div className="flex items-center gap-3 mt-4 md:mt-0 pl-16 md:pl-0">
+                                <button className="p-3 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm">
+                                    <Play className="w-5 h-5 fill-current" />
+                                </button>
+                                <button className="px-5 py-3 rounded-xl bg-slate-900 text-white font-bold text-sm shadow-lg shadow-slate-900/10 hover:bg-blue-600 hover:shadow-blue-600/20 transition-all">
+                                    View Report
                                 </button>
                             </div>
                         </div>
-                    </DashboardPanel>
+                    )) : (
+                        <div className="text-center py-12 bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+                             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                 <FileText className="w-6 h-6 text-slate-400" />
+                             </div>
+                             <h3 className="text-slate-900 font-bold mb-1">No reports analysis found</h3>
+                             <p className="text-slate-500 text-sm">Your diagnostic history will appear here.</p>
+                        </div>
+                    )}
                 </div>
-             </div>
-        </>
+            </DashboardPanel>
+        </motion.div>
     )
 }
 
 // ----------------------------------------------------------------------
-// 🏥 CLINICIAN DASHBOARD
+// 🧑‍⚕️ ASHA WORKER DASHBOARD (PLACEHOLDER FOR NOW)
 // ----------------------------------------------------------------------
-function ClinicianDashboard() {
-     return (
-        <>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <StatCard 
-                    title="Total Tests" 
-                    value="8,432" 
-                    icon={<Microscope className="w-5 h-5 text-cyan-600" />}
-                    color="bg-cyan-50 text-cyan-700"
-                />
-                 <StatCard 
-                    title="Avg Risk Score" 
-                    value="24%" 
-                    icon={<BarChart3 className="w-5 h-5 text-indigo-600" />}
-                    color="bg-indigo-50 text-indigo-700"
-                />
-                 <StatCard 
-                    title="Active Patients" 
-                    value="1,204" 
-                    icon={<Users className="w-5 h-5 text-blue-600" />}
-                    color="bg-blue-50 text-blue-700"
-                />
-                 <StatCard 
-                    title="Growth" 
-                    value="+12%" 
-                    icon={<TrendingUp className="w-5 h-5 text-green-600" />}
-                    color="bg-green-50 text-green-700"
-                />
-            </div>
+function AshaDashboard() {
+    return (
+        <div className="p-12 text-center text-slate-500">
+            Asha Dashboard - Coming Soon
+        </div>
+    )
+}
 
-            <div className="grid lg:grid-cols-2 gap-6 h-96">
-                <DashboardPanel title="Regional Risk Heatmap">
-                    <div className="flex items-center justify-center h-64 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200 text-slate-400">
-                        Map Visualization Placeholder
-                    </div>
-                </DashboardPanel>
-                 <DashboardPanel title="Recent Critical Reports">
-                     <div className="space-y-4">
-                        {[1,2,3].map((i) => (
-                             <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-white border border-slate-100 shadow-sm">
-                                <div className="flex items-center gap-4">
-                                     <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                                        <AlertTriangle className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold text-slate-900">High Probability: pneumonia</h4>
-                                        <p className="text-xs text-slate-500">Patient #492 • 10 mins ago</p>
-                                    </div>
-                                </div>
-                                <button className="text-sm font-semibold text-blue-600 hover:underline">Review</button>
-                             </div>
-                        ))}
-                     </div>
-                </DashboardPanel>
-            </div>
-        </>
+// ----------------------------------------------------------------------
+// 🏥 CLINICIAN DASHBOARD (PLACEHOLDER FOR NOW)
+// ----------------------------------------------------------------------
+function ClinicianDashboard({ stats }) {
+    return (
+         <div className="p-12 text-center text-slate-500">
+            Clinician Dashboard - Coming Soon
+        </div>
     )
 }
 
@@ -256,29 +258,10 @@ function ClinicianDashboard() {
 // SHARED COMPONENTS
 // ----------------------------------------------------------------------
 
-function StatCard({ title, value, icon, color }) {
-    return (
-        <motion.div 
-            whileHover={{ y: -4 }}
-            className="p-6 rounded-[2rem] bg-white border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300"
-        >
-            <div className="flex justify-between items-start mb-4">
-                <div className={cn("p-3 rounded-xl border border-transparent", color.replace('text-', 'bg-').replace('700', '50'))}>
-                    {icon} {/* Simplified for now to just render icon */}
-                </div>
-            </div>
-             <div className="space-y-1">
-                <h3 className="text-sm font-medium text-slate-500">{title}</h3>
-                <h4 className="text-3xl font-bold text-slate-900">{value}</h4>
-             </div>
-        </motion.div>
-    )
-}
-
 function DashboardPanel({ title, children }) {
     return (
-        <div className="glass-panel p-6 rounded-[2rem] border border-white/50 bg-white/60 shadow-sm">
-            <h3 className="font-bold text-slate-900 mb-6">{title}</h3>
+        <div className="glass-panel p-6 md:p-8 rounded-[2.5rem] bg-white border border-slate-100 shadow-xl shadow-slate-200/50">
+            <h3 className="font-extrabold text-xl text-slate-900 mb-8 tracking-tight">{title}</h3>
             {children}
         </div>
     )

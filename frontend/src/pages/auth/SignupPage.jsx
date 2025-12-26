@@ -1,10 +1,37 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { SocialButtons } from "./SocialButtons";
 import { motion } from "framer-motion";
+import { useUser } from "../../context/UserContext";
 
 export default function SignupPage() {
+  const { requestOtp, verifyOtp, isLoading, authStep, setAuthStep } = useUser();
+  const navigate = useNavigate();
+
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  const [role, setRole] = useState("INDIVIDUAL"); // Default role
+
+  const handleRequestOtp = async (e) => {
+      e.preventDefault();
+      if (!phone) return;
+      // Basic validation or formatting
+      const success = await requestOtp(phone, role);
+      if (success) {
+          // Stay on page, UI updates via authStep
+      }
+  };
+
+  const handleVerifyOtp = async (e) => {
+      e.preventDefault();
+      if (!otp) return;
+      const success = await verifyOtp(phone, otp);
+      if (success) {
+          navigate("/dashboard");
+      }
+  };
+
   return (
     <motion.div
         initial={{ opacity: 0 }}
@@ -19,51 +46,68 @@ export default function SignupPage() {
         </div>
 
         <div className="space-y-6">
-            <SocialButtons />
             
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-white/10" />
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase tracking-wider font-bold">
-                    <span className="bg-[#121212] px-3 text-gray-500 rounded-full py-0.5 border border-white/5">
-                        Or sign up with
-                    </span>
-                </div>
-            </div>
+            {authStep === "PHONE" ? (
+                <form onSubmit={handleRequestOtp} className="space-y-4 text-left">
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Phone Number</label>
+                        <Input 
+                            type="tel" 
+                            placeholder="9999999999" 
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                            className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
+                            required
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Role</label>
+                        <select 
+                            value={role} 
+                            onChange={(e) => setRole(e.target.value)}
+                            className="w-full h-11 px-3 rounded-xl bg-white/5 border border-white/10 text-white focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium appearance-none"
+                        >
+                            <option value="INDIVIDUAL" className="bg-gray-900">Individual</option>
+                            <option value="ASHA_WORKER" className="bg-gray-900">Asha Worker</option>
+                        </select>
+                    </div>
 
-            <form className="space-y-4 text-left">
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Full Name</label>
-                    <Input 
-                        type="text" 
-                        placeholder="Dr. Jane Doe" 
-                        className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
-                    />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Email</label>
-                    <Input 
-                        type="email" 
-                        placeholder="doctor@clinic.com" 
-                        className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Password</label>
-                    <Input 
-                        type="password" 
-                        placeholder="Create a password" 
-                        className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
-                    />
-                </div>
+                    <Button 
+                        type="submit" 
+                        className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 mt-2 transition-all active:scale-[0.98]"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Sending OTP..." : "Get OTP & Join"}
+                    </Button>
+                </form>
+            ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4 text-left">
+                     <div className="space-y-2">
+                        <div className="flex justify-between items-center ml-1">
+                            <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Enter OTP</label>
+                            <button type="button" onClick={() => setAuthStep("PHONE")} className="text-xs font-medium text-orange-500 hover:text-orange-400">Change Phone?</button>
+                        </div>
+                        <Input 
+                            type="text" 
+                            placeholder="123456" 
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
+                            required
+                        />
+                    </div>
 
-                <Button className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 mt-2 transition-all active:scale-[0.98]">
-                    Start Free Trial
-                </Button>
-            </form>
+                    <Button 
+                        type="submit" 
+                        className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-400 hover:to-red-500 text-white font-bold shadow-lg shadow-orange-500/20 mt-2 transition-all active:scale-[0.98]"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? "Verifying..." : "Verify & Create Account"}
+                    </Button>
+                </form>
+            )}
         </div>
-        
+
         <div className="mt-8 text-center text-sm text-gray-500">
             Already have an account? <Link to="/auth/login" className="text-white font-bold hover:text-orange-500 transition-colors">Log in</Link>
         </div>
