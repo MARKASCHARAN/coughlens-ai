@@ -12,6 +12,7 @@ from app.api.ml.ml_test_routes import router as ml_test_router
 from app.api.auth.whatsapp_routes import router as whatsapp_auth_router
 from app.api.auth.profile_routes import router as profile_router
 from app.api.auth.email_routes import router as email_router
+from app.api.patients.patient_routes import router as patient_router
 
 
 
@@ -39,6 +40,7 @@ app.include_router(ml_test_router)
 app.include_router(whatsapp_auth_router)
 app.include_router(profile_router)
 app.include_router(email_router)
+app.include_router(patient_router)
 
 @app.get("/")
 def root():

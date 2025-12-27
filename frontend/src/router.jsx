@@ -1,8 +1,9 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import LandingPage from "./pages/LandingPage";
 import AuthLayout from "./pages/auth/AuthLayout";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
+import ProfileCompletionPage from "./pages/auth/ProfileCompletionPage";
 import DashboardLayout from "./pages/dashboard/DashboardLayout";
 import OverviewPage from "./pages/dashboard/OverviewPage";
 import PatientListPage from "./pages/patients/PatientListPage";
@@ -14,6 +15,7 @@ import SettingsPage from "./pages/settings/SettingsPage";
 import CoughTestPage from "./pages/test/CoughTestPage";
 import ReportResultPage from "./pages/report/ReportResultPage";
 import AboutPage from "./pages/AboutPage";
+import ProtectedRoute from "./components/auth/ProtectedRoute";
 
 export const router = createBrowserRouter([
   {
@@ -39,8 +41,12 @@ export const router = createBrowserRouter([
     ],
   },
   {
+      path: "/profile/complete",
+      element: <ProtectedRoute><ProfileCompletionPage /></ProtectedRoute>
+  },
+  {
     path: "/dashboard",
-    element: <DashboardLayout />,
+    element: <ProtectedRoute><DashboardLayout /></ProtectedRoute>,
     children: [
       {
         index: true,
@@ -48,11 +54,11 @@ export const router = createBrowserRouter([
       },
       {
         path: "patients",
-        element: <PatientListPage />,
+        element: <ProtectedRoute roles={["ASHA_WORKER", "CLINICIAN"]}><PatientListPage /></ProtectedRoute>,
       },
       {
         path: "patients/:id",
-        element: <PatientProfilePage />,
+        element: <ProtectedRoute roles={["ASHA_WORKER", "CLINICIAN"]}><PatientProfilePage /></ProtectedRoute>,
       },
       {
         path: "reports",
@@ -60,7 +66,7 @@ export const router = createBrowserRouter([
       },
       {
         path: "analytics",
-        element: <AnalyticsPage />,
+        element: <ProtectedRoute roles={["CLINICIAN"]}><AnalyticsPage /></ProtectedRoute>,
       },
       {
         path: "learn",
@@ -74,20 +80,18 @@ export const router = createBrowserRouter([
   },
   {
     path: "/test/cough",
-    element: <CoughTestPage />,
+    element: <ProtectedRoute><CoughTestPage /></ProtectedRoute>,
   },
-  // Redirect old /test to /test/cough for now or handle as separate
   {
     path: "/test",
-    element: <CoughTestPage />, 
+    element: <Navigate to="/test/cough" replace />, 
   },
   {
     path: "/reports/:id",
-    element: <ReportResultPage />,
+    element: <ProtectedRoute><ReportResultPage /></ProtectedRoute>,
   },
-  // Handle /report/:id legacy if needed, or update legacy links
   {
     path: "/report/:id",
-    element: <ReportResultPage />,
+    element: <Navigate to="/reports/:id" replace />,
   }
 ]);

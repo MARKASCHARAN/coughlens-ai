@@ -4,5 +4,9 @@ export const analyticsService = {
     getDashboard: async () => {
         const response = await api.get('/analytics/dashboard');
         return response.data;
+    },
+    getMyAnalytics: async () => {
+        const response = await api.get('/analytics/my');
+        return response.data;
     }
 };

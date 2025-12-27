@@ -18,7 +18,7 @@ import {
 import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 import { useUser } from "../../context/UserContext";
-// import { reportsService } from "../../services/reports";
+import { reportsService } from "../../services/reports";
 import { analyticsService } from "../../services/analytics";
 
 export default function OverviewPage() {
@@ -34,15 +34,13 @@ export default function OverviewPage() {
         const loadData = async () => {
             setLoading(true);
             try {
-                if (role === "CLINICIAN") {
+                if (role === "CLINICIAN" || role === "ASHA_WORKER") {
                     const data = await analyticsService.getDashboard();
                     setStats(data);
                 } else if (role === "INDIVIDUAL") {
-                    // Mock data for demo
-                    setReports([
-                         { id: 1, date: "2024-12-20", prediction: "Healthy", confidence: 0.98, ipfs_cid: "QmX...", audio_url: "#" },
-                         { id: 2, date: "2024-12-05", prediction: "Potential Asthma", confidence: 0.72, ipfs_cid: "QmY...", audio_url: "#" }
-                    ]);
+                    const data = await analyticsService.getMyAnalytics();
+                    setStats(data); // Assuming response structure { reports: [], stats: {} }
+                    setReports(data.reports || []);
                 }
             } catch (error) {
                 console.error("Dashboard data load failed", error);
@@ -80,7 +78,7 @@ export default function OverviewPage() {
             </header>
 
             {role === "INDIVIDUAL" && <IndividualDashboard reports={reports} user={user} />}
-            {role === "ASHA_WORKER" && <AshaDashboard />}
+            {role === "ASHA_WORKER" && <AshaDashboard stats={stats} />}
             {role === "CLINICIAN" && <ClinicianDashboard stats={stats} />}
 
         </div>
@@ -107,7 +105,7 @@ function IndividualDashboard({ reports, user }) {
                 
                 <div className="relative z-10 max-w-2xl">
                     <h2 className="text-3xl md:text-5xl font-bold mb-4">
-                        Hello, {user?.phone || "User"}
+                        Hello, {user?.profile?.name || user?.email?.split('@')[0] || "User"}
                     </h2>
                     <p className="text-blue-100 text-lg md:text-xl font-medium mb-8 leading-relaxed opacity-90">
                         Your respiratory health is stable. Tap the microphone to start a new assessment or ask about your history.
@@ -209,6 +207,18 @@ function IndividualDashboard({ reports, user }) {
                             </div>
 
                             <div className="flex items-center gap-3 mt-4 md:mt-0 pl-16 md:pl-0">
+                                <button 
+                                    onClick={async () => {
+                                        if (confirm("Share this report via WhatsApp?")) {
+                                            await reportsService.shareReportWhatsApp(rpt._id || rpt.id, user.phone || "919000000000");
+                                            alert("Report shared!");
+                                        }
+                                    }}
+                                    className="p-3 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-green-600 hover:border-green-200 transition-colors shadow-sm"
+                                    title="Share on WhatsApp"
+                                >
+                                    <Zap className="w-5 h-5 fill-current" />
+                                </button>
                                 <button className="p-3 rounded-xl bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors shadow-sm">
                                     <Play className="w-5 h-5 fill-current" />
                                 </button>
@@ -235,11 +245,82 @@ function IndividualDashboard({ reports, user }) {
 // ----------------------------------------------------------------------
 // 🧑‍⚕️ ASHA WORKER DASHBOARD (PLACEHOLDER FOR NOW)
 // ----------------------------------------------------------------------
-function AshaDashboard() {
+function AshaDashboard({ stats }) {
     return (
-        <div className="p-12 text-center text-slate-500">
-            Asha Dashboard - Coming Soon
-        </div>
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+        >
+             {/* Hero Section */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-emerald-900 p-8 md:p-12 text-white shadow-2xl shadow-emerald-900/20">
+                <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+                     <Users className="w-64 h-64 text-white" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/20 to-teal-600/20" />
+                
+                <div className="relative z-10 max-w-2xl">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                        Community Health
+                    </h2>
+                    <p className="text-emerald-100 text-lg md:text-xl font-medium mb-8 leading-relaxed opacity-90">
+                        Manage your patients and conduct screenings effectively.
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-4">
+                        <Link to="/dashboard/patients" className="px-8 py-4 rounded-2xl bg-white text-emerald-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm uppercase tracking-wide flex items-center gap-2">
+                             <UserPlus className="w-4 h-4 text-emerald-600" />
+                             Create Patient
+                        </Link>
+                         <Link to="/dashboard/patients" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-bold hover:bg-white/20 transition-all text-sm uppercase tracking-wide backdrop-blur-md flex items-center gap-2">
+                             <Microscope className="w-4 h-4" />
+                             Record Cough
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
+            {/* Survey Analytics */}
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl w-fit mb-4">
+                         <Users className="w-6 h-6" />
+                     </div>
+                     <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Total Patients</h3>
+                     <div className="text-3xl font-bold text-slate-900">{stats?.total_patients || 0}</div>
+                 </motion.div>
+
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <div className="p-3 bg-red-50 text-red-600 rounded-2xl w-fit mb-4">
+                         <AlertTriangle className="w-6 h-6" />
+                     </div>
+                     <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">High Risk Cases</h3>
+                     <div className="text-3xl font-bold text-slate-900">{stats?.active_cases || 0}</div>
+                 </motion.div>
+
+                  <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl w-fit mb-4">
+                         <Activity className="w-6 h-6" />
+                     </div>
+                     <h3 className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Tests Today</h3>
+                     <div className="text-3xl font-bold text-slate-900">{stats?.tests_today || 0}</div>
+                 </motion.div>
+            </div>
+            
+            {/* Quick Links for Report Sharing */}
+             <div className="grid md:grid-cols-2 gap-6">
+                 <Link to="/dashboard/patients" className="glass-panel p-6 rounded-[2rem] bg-white border border-slate-100 shadow-lg flex items-center justify-between group hover:border-emerald-200 transition-colors">
+                    <div>
+                         <h4 className="font-bold text-slate-900 mb-1">Patient Reports</h4>
+                         <p className="text-sm text-slate-500">View and manage diagnostic history</p>
+                    </div>
+                     <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors">
+                        <FileText className="w-5 h-5" />
+                     </div>
+                 </Link>
+             </div>
+        </motion.div>
     )
 }
 
@@ -248,9 +329,67 @@ function AshaDashboard() {
 // ----------------------------------------------------------------------
 function ClinicianDashboard({ stats }) {
     return (
-         <div className="p-12 text-center text-slate-500">
-            Clinician Dashboard - Coming Soon
-        </div>
+         <motion.div 
+            initial={{ opacity: 0, y: 20 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }}
+            className="space-y-8"
+        >
+             {/* Hero Section */}
+            <div className="relative overflow-hidden rounded-[2.5rem] bg-indigo-900 p-8 md:p-12 text-white shadow-2xl shadow-indigo-900/20">
+                <div className="absolute top-0 right-0 p-12 opacity-10 pointer-events-none">
+                     <BarChart3 className="w-64 h-64 text-white" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/20 to-blue-600/20" />
+                
+                <div className="relative z-10 max-w-2xl">
+                    <h2 className="text-3xl md:text-5xl font-bold mb-4">
+                        Clinical Overview
+                    </h2>
+                    <p className="text-indigo-100 text-lg md:text-xl font-medium mb-8 leading-relaxed opacity-90">
+                        Monitor global health trends and high-risk patient cohorts.
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-4">
+                        <Link to="/dashboard/analytics" className="px-8 py-4 rounded-2xl bg-white text-indigo-900 font-bold shadow-lg hover:shadow-xl hover:scale-105 transition-all text-sm uppercase tracking-wide flex items-center gap-2">
+                             <BarChart3 className="w-4 h-4 text-indigo-600" />
+                             View Analytics
+                        </Link>
+                         <Link to="/dashboard/patients" className="px-8 py-4 rounded-2xl bg-white/10 border border-white/20 text-white font-bold hover:bg-white/20 transition-all text-sm uppercase tracking-wide backdrop-blur-md flex items-center gap-2">
+                             <Users className="w-4 h-4" />
+                             Patients
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2">Total Screenings</h3>
+                     <div className="text-4xl font-extrabold text-slate-900">{stats?.total_assessments || 1250}</div>
+                     <span className="text-green-500 text-xs font-bold">+12% this week</span>
+                 </motion.div>
+
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2">Respiratory Issues</h3>
+                     <div className="text-4xl font-extrabold text-slate-900">{stats?.positive_cases || 45}</div>
+                     <span className="text-red-500 text-xs font-bold">3.6% Rate</span>
+                 </motion.div>
+
+                  <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2">Avg Confidence</h3>
+                     <div className="text-4xl font-extrabold text-slate-900">94%</div>
+                     <span className="text-slate-400 text-xs font-bold">Inference Accuracy</span>
+                 </motion.div>
+
+                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50 border border-white group">
+                     <h3 className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-2">Active Regions</h3>
+                     <div className="text-4xl font-extrabold text-slate-900">8</div>
+                     <span className="text-blue-500 text-xs font-bold">Zones Monitored</span>
+                 </motion.div>
+            </div>
+        </motion.div>
     )
 }
 

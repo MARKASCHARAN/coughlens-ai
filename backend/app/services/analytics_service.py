@@ -1,40 +1,33 @@
+from app.models.report_model import ReportModel
+from app.models.patient_model import PatientModel
+
+
 class AnalyticsService:
 
     @staticmethod
-    def dashboard(user=None, payload=None):
+    def individual_dashboard(user):
+        patient = PatientModel.get_by_user(user["_id"])
+        reports = ReportModel.get_by_patient(patient["_id"])
+
         return {
-            "speak": (
-                "Here is today’s summary. "
-                "Five patients were tested. "
-                "Two are marked as high risk."
-            ),
-            "action": "ANALYTICS_DASHBOARD"
+            "total_tests": len(reports),
+            "high_risk": len([r for r in reports if r["prediction"] != "HEALTHY"]),
         }
 
     @staticmethod
-    def high_risk_patients(user=None, payload=None):
-        return {
-            "speak": "There are two high risk patients today.",
-            "action": "HIGH_RISK_PATIENTS"
-        }
+    def dashboard(user):
+        if user["role"] == "CLINICIAN":
+            reports = ReportModel.get_all()
 
-    @staticmethod
-    def today_stats(user=None, payload=None):
-        return {
-            "speak": "Today, five cough tests were completed.",
-            "action": "TODAY_STATS"
-        }
+        elif user["role"] == "ASHA_WORKER":
+            patients = PatientModel.get_by_asha(user["_id"])
+            patient_ids = [p["_id"] for p in patients]
+            reports = ReportModel.get_by_patients(patient_ids)
 
-    @staticmethod
-    def monthly_trends(user=None, payload=None):
-        return {
-            "speak": "This month shows an increase in respiratory symptoms.",
-            "action": "MONTHLY_TRENDS"
-        }
+        else:
+            raise Exception("Invalid role")
 
-    @staticmethod
-    def export_csv(user=None, payload=None):
         return {
-            "speak": "Analytics report exported successfully.",
-            "action": "EXPORT_ANALYTICS"
+            "total_tests": len(reports),
+            "high_risk": len([r for r in reports if r["prediction"] != "HEALTHY"]),
         }

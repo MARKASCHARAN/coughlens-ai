@@ -6,21 +6,32 @@ const UserContext = createContext(null);
 export function UserProvider({ children }) {
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    const [authStep, setAuthStep] = useState("PHONE"); // PHONE | OTP
+    const [authStep, setAuthStep] = useState("EMAIL"); // EMAIL | OTP
 
     useEffect(() => {
         // Check for existing token on load
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("access_token");
         const storedRole = localStorage.getItem("role");
         if (token && storedRole) {
+            // Optimistically set basic user
             setUser({ role: storedRole, token });
+            
+            // Fetch fresh data
+            authService.getProfile()
+                .then(data => {
+                    setUser(prev => ({ ...prev, ...data }));
+                })
+                .catch(err => {
+                    console.error("Failed to restore session", err);
+                    // Optionally logout if 401?
+                });
         }
     }, []);
 
-    const requestOtp = async (phone, role) => {
+    const requestOtp = async (email, role) => {
         setIsLoading(true);
         try {
-            await authService.requestOtp(phone, role);
+            await authService.requestOtp(email, role);
             setAuthStep("OTP");
             return true;
         } catch (error) {
@@ -32,16 +43,28 @@ export function UserProvider({ children }) {
         }
     };
 
-    const verifyOtp = async (phone, otp) => {
+    const verifyOtp = async (email, otp) => {
         setIsLoading(true);
         try {
-            const data = await authService.verifyOtp(phone, otp);
-            // data: { access_token, token_type, role }
+            const data = await authService.verifyOtp(email, otp);
+            // data: { access_token, role }
             if (data.access_token) {
-                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("access_token", data.access_token);
                 localStorage.setItem("role", data.role);
-                setUser({ role: data.role, token: data.access_token });
-                return true;
+
+                let fullUser = { role: data.role, token: data.access_token };
+                
+                // Fetch full profile immediately
+                try {
+                     const profileData = await authService.getProfile();
+                     fullUser = { ...profileData, token: data.access_token, role: data.role };
+                     setUser(fullUser);
+                } catch (e) {
+                     console.warn("Could not fetch profile on login", e);
+                     setUser(fullUser);
+                }
+
+                return fullUser;
             }
             return false;
         } catch (error) {
@@ -52,15 +75,33 @@ export function UserProvider({ children }) {
         }
     };
 
+    const completeProfile = async (profileData) => {
+        setIsLoading(true);
+        try {
+            const data = await authService.completeProfile(profileData);
+            // The backend returns the updated user object with profile
+            // Based on logs: { _id, role, auth, profile: {...}, role_profile: {...} }
+            
+            // Refresh user state
+            setUser(prev => ({ ...prev, ...data }));
+            return true;
+        } catch (error) {
+            console.error("Profile Completion Failed", error);
+            return false;
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const logout = () => {
-        localStorage.removeItem("token");
+        localStorage.removeItem("access_token");
         localStorage.removeItem("role");
         setUser(null);
-        setAuthStep("PHONE");
+        setAuthStep("EMAIL");
     };
 
     return (
-        <UserContext.Provider value={{ user, isLoading, requestOtp, verifyOtp, logout, authStep, setAuthStep }}>
+        <UserContext.Provider value={{ user, isLoading, requestOtp, verifyOtp, completeProfile, logout, authStep, setAuthStep }}>
             {children}
         </UserContext.Provider>
     );

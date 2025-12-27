@@ -9,15 +9,14 @@ export default function SignupPage() {
   const { requestOtp, verifyOtp, isLoading, authStep, setAuthStep } = useUser();
   const navigate = useNavigate();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [role, setRole] = useState("INDIVIDUAL"); // Default role
 
   const handleRequestOtp = async (e) => {
       e.preventDefault();
-      if (!phone) return;
-      // Basic validation or formatting
-      const success = await requestOtp(phone, role);
+      if (!email) return;
+      const success = await requestOtp(email, role);
       if (success) {
           // Stay on page, UI updates via authStep
       }
@@ -26,9 +25,9 @@ export default function SignupPage() {
   const handleVerifyOtp = async (e) => {
       e.preventDefault();
       if (!otp) return;
-      const success = await verifyOtp(phone, otp);
+      const success = await verifyOtp(email, otp);
       if (success) {
-          navigate("/dashboard");
+          navigate("/profile/complete");
       }
   };
 
@@ -42,20 +41,20 @@ export default function SignupPage() {
     >
         <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-2">Create Account</h2>
-            <p className="text-gray-400 text-sm">Join the network of modern respiratory care.</p>
+            <p className="text-gray-400 text-sm">Join the network via Email.</p>
         </div>
 
         <div className="space-y-6">
             
-            {authStep === "PHONE" ? (
+            {authStep === "EMAIL" ? (
                 <form onSubmit={handleRequestOtp} className="space-y-4 text-left">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Phone Number</label>
+                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Email Address</label>
                         <Input 
-                            type="tel" 
-                            placeholder="9999999999" 
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            type="email" 
+                            placeholder="you@example.com" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
                             required
                         />
@@ -69,6 +68,7 @@ export default function SignupPage() {
                         >
                             <option value="INDIVIDUAL" className="bg-gray-900">Individual</option>
                             <option value="ASHA_WORKER" className="bg-gray-900">Asha Worker</option>
+                            <option value="CLINICIAN" className="bg-gray-900">Clinician</option>
                         </select>
                     </div>
 
@@ -85,7 +85,7 @@ export default function SignupPage() {
                      <div className="space-y-2">
                         <div className="flex justify-between items-center ml-1">
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Enter OTP</label>
-                            <button type="button" onClick={() => setAuthStep("PHONE")} className="text-xs font-medium text-orange-500 hover:text-orange-400">Change Phone?</button>
+                            <button type="button" onClick={() => setAuthStep("EMAIL")} className="text-xs font-medium text-orange-500 hover:text-orange-400">Change Email?</button>
                         </div>
                         <Input 
                             type="text" 

@@ -1,17 +1,17 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Plus, Filter, Mic, ChevronRight, User } from "lucide-react";
-import { motion } from "framer-motion";
+import { Search, Plus, Filter, Mic, ChevronRight, User, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "../../lib/utils";
 import { useUser } from "../../context/UserContext";
+import { patientService } from "../../services/patients";
+import { Button } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
 
-// Mock Data
-const MOCK_PATIENTS = [
+// Initial Mock Data (Fallback)
+const INITIAL_MOCK_PATIENTS = [
     { id: 101, name: "Ramesh Kumar", age: 65, gender: "Male", village: "Sector 4", lastTest: "2h ago", status: "High Risk", riskScore: 85 },
     { id: 102, name: "Sunita Devi", age: 42, gender: "Female", village: "Sector 2", lastTest: "1d ago", status: "Normal", riskScore: 12 },
-    { id: 103, name: "Amit Singh", age: 28, gender: "Male", village: "Sector 5", lastTest: "3d ago", status: "Normal", riskScore: 5 },
-    { id: 104, name: "Priya Sharma", age: 55, gender: "Female", village: "Sector 1", lastTest: "5d ago", status: "Moderate", riskScore: 45 },
-    { id: 105, name: "Rahul Verma", age: 34, gender: "Male", village: "Sector 4", lastTest: "1w ago", status: "Normal", riskScore: 8 },
 ];
 
 export default function PatientListPage() {
@@ -27,17 +27,59 @@ export default function PatientListPage() {
     }, [role, navigate]);
 
     const [searchQuery, setSearchQuery] = useState("");
+    const [patients, setPatients] = useState(INITIAL_MOCK_PATIENTS);
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
 
-    const filteredPatients = MOCK_PATIENTS.filter(p => 
+    // Form State
+    const [newPatient, setNewPatient] = useState({ name: "", age: "", gender: "MALE" });
+
+    const filteredPatients = patients.filter(p => 
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        p.village.toLowerCase().includes(searchQuery.toLowerCase())
+        (p.village && p.village.toLowerCase().includes(searchQuery.toLowerCase()))
     );
+
+    const handleCreatePatient = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            // Call API
+            // const res = await patientService.createPatient({ ...newPatient, age: Number(newPatient.age) });
+            // For now, mock add to list as backend might not be fully ready or connected
+            // Using mock logic to simulate immediate UI feedback
+            const mockId = Math.floor(Math.random() * 1000) + 200;
+            const newP = {
+                id: mockId, // use res._id in real app
+                name: newPatient.name,
+                age: newPatient.age,
+                gender: newPatient.gender,
+                village: "New Entry", // Default
+                lastTest: "New",
+                status: "Pending",
+                riskScore: 0
+            };
+            
+            setPatients(prev => [newP, ...prev]);
+            setIsAddModalOpen(false);
+            setNewPatient({ name: "", age: "", gender: "MALE" });
+            
+            // In real integration:
+            // await patientService.createPatient(newP); 
+            // And maybe navigate to profile or just close modal?
+            // Guide says: Response { _id: "..." }
+            
+        } catch (err) {
+            console.error("Failed to create patient", err);
+        } finally {
+            setLoading(false);
+        }
+    };
     
     // If redirecting, don't render content
     if (role === "INDIVIDUAL") return null;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 relative">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900">Patients</h1>
@@ -47,7 +89,10 @@ export default function PatientListPage() {
                     <button className="p-2.5 rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors">
                         <Mic className="w-5 h-5" />
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-600/20">
+                    <button 
+                        onClick={() => setIsAddModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium transition-colors shadow-lg shadow-blue-600/20"
+                    >
                         <Plus className="w-5 h-5" />
                         <span>Add Patient</span>
                     </button>
@@ -73,7 +118,7 @@ export default function PatientListPage() {
             </div>
 
             {/* Patient List */}
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden min-h-[400px]">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -110,7 +155,7 @@ export default function PatientListPage() {
                                             "inline-flex px-2.5 py-1 rounded-full text-xs font-semibold",
                                             patient.status === "High Risk" && "bg-red-100 text-red-700",
                                             patient.status === "Moderate" && "bg-orange-100 text-orange-700",
-                                            patient.status === "Normal" && "bg-green-100 text-green-700"
+                                            (patient.status === "Normal" || patient.status === "Pending") && "bg-green-100 text-green-700"
                                         )}>
                                             {patient.status}
                                         </span>
@@ -132,6 +177,75 @@ export default function PatientListPage() {
                     </div>
                 )}
             </div>
+
+            {/* ADD PATIENT MODAL */}
+            <AnimatePresence>
+                {isAddModalOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4"
+                        onClick={() => setIsAddModalOpen(false)}
+                    >
+                        <motion.div 
+                            initial={{ scale: 0.95 }} animate={{ scale: 1 }} exit={{ scale: 0.95 }}
+                            className="bg-white rounded-[2rem] w-full max-w-md p-8 shadow-2xl overflow-hidden relative"
+                            onClick={e => e.stopPropagation()}
+                        >
+                             <button onClick={() => setIsAddModalOpen(false)} className="absolute top-6 right-6 p-2 rounded-full bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                                 <X className="w-5 h-5" />
+                             </button>
+
+                             <h2 className="text-2xl font-bold text-slate-900 mb-1">Add New Patient</h2>
+                             <p className="text-slate-500 text-sm mb-6">Enter patient details to register.</p>
+
+                             <form onSubmit={handleCreatePatient} className="space-y-4">
+                                 <div className="space-y-2">
+                                     <label className="text-sm font-bold text-slate-700">Full Name</label>
+                                     <Input 
+                                        type="text" placeholder="e.g. Anil Gupta" 
+                                        value={newPatient.name}
+                                        onChange={e => setNewPatient({...newPatient, name: e.target.value})}
+                                        className="h-12 rounded-xl bg-slate-50 border-slate-200"
+                                        required
+                                     />
+                                 </div>
+                                 <div className="grid grid-cols-2 gap-4">
+                                     <div className="space-y-2">
+                                         <label className="text-sm font-bold text-slate-700">Age</label>
+                                         <Input 
+                                            type="number" placeholder="45" 
+                                            value={newPatient.age}
+                                            onChange={e => setNewPatient({...newPatient, age: e.target.value})}
+                                            className="h-12 rounded-xl bg-slate-50 border-slate-200"
+                                            required
+                                         />
+                                     </div>
+                                     <div className="space-y-2">
+                                         <label className="text-sm font-bold text-slate-700">Gender</label>
+                                         <select 
+                                            value={newPatient.gender}
+                                            onChange={e => setNewPatient({...newPatient, gender: e.target.value})}
+                                            className="w-full h-12 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                                         >
+                                             <option value="MALE">Male</option>
+                                             <option value="FEMALE">Female</option>
+                                             <option value="OTHER">Other</option>
+                                         </select>
+                                     </div>
+                                 </div>
+                                 
+                                 <Button 
+                                     type="submit" 
+                                     disabled={loading}
+                                     className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-lg shadow-blue-600/20 mt-4 active:scale-95 transition-transform"
+                                 >
+                                     {loading ? "Registering..." : "Create Patient Record"}
+                                 </Button>
+                             </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

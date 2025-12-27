@@ -85,7 +85,7 @@ export function VoiceProvider({ children }) {
     };
 
     const startRecording = async (patientId = null) => {
-        if (patientId) setCurrentPatientId(patientId);
+        setCurrentPatientId(patientId || null);
         setRecordedBlob(null);
 
         if (mode === 'COMMAND' && recognitionRef.current) {
@@ -156,8 +156,8 @@ export function VoiceProvider({ children }) {
     };
 
     const analyzeCough = async () => {
-        if (!recordedBlob || !currentPatientId) {
-            console.error("No recording or patient ID");
+        if (!recordedBlob) {
+            console.error("No recording found");
             return null;
         }
         setStatus("processing");

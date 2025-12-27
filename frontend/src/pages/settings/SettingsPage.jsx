@@ -8,7 +8,10 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import { useUser } from "../../context/UserContext";
+
 export default function SettingsPage() {
+    const { user } = useUser();
     return (
         <div className="space-y-8 max-w-4xl">
             <header>
@@ -53,16 +56,33 @@ export default function SettingsPage() {
                 <section className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-slate-50 bg-slate-50/50 flex items-center gap-3">
                          <User className="w-5 h-5 text-blue-600" />
-                         <h3 className="font-bold text-slate-900">Provider Profile</h3>
+                         <h3 className="font-bold text-slate-900">
+                            {user?.role === "CLINICIAN" ? "Provider Profile" : "Personal Profile"}
+                         </h3>
                     </div>
                     <div className="p-6 space-y-6">
                         <div className="flex items-center gap-6">
-                            <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-                                <User className="w-8 h-8" />
+                            <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
+                                {user?.profile?.name ? (
+                                    <img 
+                                        src={`https://api.dicebear.com/7.x/notionists/svg?seed=${user.profile.name}`} 
+                                        alt="Avatar" 
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <User className="w-8 h-8" />
+                                )}
                             </div>
                             <div>
-                                <h4 className="font-bold text-lg text-slate-900">Dr. Salthi</h4>
-                                <p className="text-slate-500">Clinician ID: #88392</p>
+                                <h4 className="font-bold text-lg text-slate-900">
+                                    {user?.profile?.name || "User"}
+                                </h4>
+                                <p className="text-slate-500">
+                                    {user?.role === "CLINICIAN" ? `Clinician` : user?.email || "No Email"}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1 uppercase tracking-wide font-bold">
+                                    {user?.role}
+                                </p>
                             </div>
                             <button className="ml-auto px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">
                                 Edit

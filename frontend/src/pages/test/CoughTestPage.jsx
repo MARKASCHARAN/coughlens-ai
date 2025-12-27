@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { 
     Mic, 
     Square, 
@@ -21,6 +21,9 @@ export default function CoughTestPage() {
     // UI steps: 1: Info, 2: Recording, 3: Review, 4: Uploading
     const [step, setStep] = useState(1); 
     const [recordingTime, setRecordingTime] = useState(0);
+
+    const location = useLocation();
+    const patientId = location.state?.patientId;
 
     // Initial Setup
     useEffect(() => {
@@ -44,8 +47,8 @@ export default function CoughTestPage() {
     const handleStartRecording = () => {
         setStep(2);
         setRecordingTime(0);
-        // Use phone as patient ID for now
-        startRecording(user?.phone || "test-patient"); 
+        // Pass patientId if available (for ASHA/Clinician), otherwise null (Individual)
+        startRecording(patientId); 
     };
 
     const handleStopRecording = () => {

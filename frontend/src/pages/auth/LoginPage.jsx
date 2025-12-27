@@ -9,15 +9,15 @@ export default function LoginPage() {
   const { requestOtp, verifyOtp, isLoading, authStep, setAuthStep } = useUser();
   const navigate = useNavigate();
 
-  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [role, setRole] = useState("INDIVIDUAL"); // Default role
 
   const handleRequestOtp = async (e) => {
       e.preventDefault();
-      if (!phone) return;
+      if (!email) return;
       // Basic validation or formatting could go here
-      const success = await requestOtp(phone, role);
+      const success = await requestOtp(email, role);
       if (success) {
           // Stay on page, UI updates via authStep
       }
@@ -26,9 +26,16 @@ export default function LoginPage() {
   const handleVerifyOtp = async (e) => {
       e.preventDefault();
       if (!otp) return;
-      const success = await verifyOtp(phone, otp);
-      if (success) {
-          navigate("/dashboard");
+      const result = await verifyOtp(email, otp);
+      if (result) {
+          // Check if profile is already completed.
+          // The verifyOtp in UserContext now (will) return the user object or true.
+          // I will update UserContext to return the user object.
+          if (result.role_profile?.profile_completed) {
+              navigate("/dashboard");
+          } else {
+              navigate("/profile/complete");
+          }
       }
   };
 
@@ -41,23 +48,23 @@ export default function LoginPage() {
         className="text-center"
     >
         <div className="mb-8">
-             <h2 className="text-2xl font-bold text-white mb-2">Welcome Back</h2>
+             <h2 className="text-2xl font-bold text-white mb-2">Welcome to CoughLens</h2>
              <p className="text-gray-400 text-sm">
-                {authStep === "PHONE" ? "Sign in via Phone to access your dashboard." : "Enter the OTP sent to your phone."}
+                {authStep === "EMAIL" ? "Sign in or Join via Email to access your dashboard." : "Enter the OTP sent to your email."}
              </p>
         </div>
 
         <div className="space-y-6">
             
-            {authStep === "PHONE" ? (
+            {authStep === "EMAIL" ? (
                 <form onSubmit={handleRequestOtp} className="space-y-4 text-left">
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Phone Number</label>
+                        <label className="text-xs font-bold text-gray-400 ml-1 uppercase tracking-wide">Email Address</label>
                         <Input 
-                            type="tel" 
-                            placeholder="9999999999" 
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
+                            type="email" 
+                            placeholder="you@example.com" 
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             className="h-11 rounded-xl bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:bg-white/10 focus:border-orange-500/50 transition-all font-medium"
                             required
                         />
@@ -71,6 +78,7 @@ export default function LoginPage() {
                         >
                             <option value="INDIVIDUAL" className="bg-gray-900">Individual</option>
                             <option value="ASHA_WORKER" className="bg-gray-900">Asha Worker</option>
+                            <option value="CLINICIAN" className="bg-gray-900">Clinician</option>
                         </select>
                     </div>
 
@@ -87,7 +95,7 @@ export default function LoginPage() {
                      <div className="space-y-2">
                         <div className="flex justify-between items-center ml-1">
                             <label className="text-xs font-bold text-gray-400 uppercase tracking-wide">Enter OTP</label>
-                            <button type="button" onClick={() => setAuthStep("PHONE")} className="text-xs font-medium text-orange-500 hover:text-orange-400">Change Phone?</button>
+                            <button type="button" onClick={() => setAuthStep("EMAIL")} className="text-xs font-medium text-orange-500 hover:text-orange-400">Change Email?</button>
                         </div>
                         <Input 
                             type="text" 
