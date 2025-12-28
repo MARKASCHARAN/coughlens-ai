@@ -80,3 +80,25 @@ def share_report_whatsapp(
         "status": "SENT",
         "whatsapp_sid": sid
     }
+
+
+# =========================
+# GET SINGLE REPORT
+# =========================
+@router.get("/{report_id}")
+def get_report_by_id(
+    report_id: str,
+    user=Depends(get_current_user)
+):
+    report = ReportModel.get_by_id(report_id)
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    # 🔐 Access Control
+    if user["role"] != "CLINICIAN":
+        # Allow if user created it (Individual self-test or ASHA)
+        # OR if user is the patient (if we stored patient_user_id?) - Assuming created_by covers self-test
+        check_ownership(report["created_by"], user["_id"])
+
+    return report

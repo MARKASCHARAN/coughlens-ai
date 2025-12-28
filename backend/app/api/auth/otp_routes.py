@@ -6,54 +6,52 @@ from app.core.security import create_access_token
 
 router = APIRouter(prefix="/auth/otp", tags=["Auth"])
 
-ALLOWED_OTP_ROLES = ["INDIVIDUAL", "ASHA_WORKER"]
+ALLOWED_OTP_ROLES = ["INDIVIDUAL", "ASHA_WORKER", "CLINICIAN"]
+
 
 # =========================
-# Request OTP
+# REQUEST PHONE OTP
 # =========================
 @router.post("/request")
 def request_otp(phone: str, role: str):
     if role not in ALLOWED_OTP_ROLES:
-        raise HTTPException(400, "Role not allowed for OTP login")
+        raise HTTPException(400, "Role not allowed")
 
     otp = OTPService.generate_otp()
-    OTPService.save_otp(phone, otp, role)
+
+    OTPService.save_otp(
+        identifier=phone,
+        otp=otp,
+        role=role,
+        channel="SMS"
+    )
 
     try:
         SMSService.send_otp(phone, otp)
     except Exception:
-        # DEV MODE fallback
-        print("⚠️ SMS failed, DEV MODE OTP:", otp)
+        print("⚠️ SMS FAILED — DEV OTP:", otp)
 
-    return {
-        "success": True,
-        "message": "OTP sent"
-    }
+    return {"status": "OTP_SENT"}
 
 
 # =========================
-# Verify OTP
+# VERIFY PHONE OTP
 # =========================
 @router.post("/verify")
 def verify_otp(phone: str, otp: str):
-    phone = phone.strip()
-
-    print("🔍 VERIFY OTP FOR:", phone, otp)
-
-    record = OTPService.verify_otp(phone, otp)
-
-    if not record:
-        print("❌ OTP RECORD NOT FOUND")
-        raise HTTPException(401, "Invalid or expired OTP")
-
-    print("✅ OTP VERIFIED, ROLE:", record["role"])
-
-    user = UserModel.get_or_create_phone_user(
-        phone=phone,
-        role=record["role"]
+    record = OTPService.verify_otp(
+        identifier=phone,
+        otp=otp,
+        channel="SMS"
     )
 
-    print("✅ USER OBJECT:", user)
+    if not record:
+        raise HTTPException(401, "Invalid or expired OTP")
+
+    user = UserModel.get_or_create_phone_user(
+        phone=phone.strip(),
+        role=record["role"]
+    )
 
     token = create_access_token({
         "sub": user["_id"],

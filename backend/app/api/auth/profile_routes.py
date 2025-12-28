@@ -20,11 +20,40 @@ def get_my_profile(user=Depends(get_current_user)):
     if not db_user:
         raise HTTPException(404, "User not found")
 
+    # ======================================
+    # 🩹 SELF-HEALING: Check Patient Record
+    # ======================================
+    profile_completed = db_user.get("profile_completed", False)
+    
+    # DEBUG LOGGING
+    import datetime
+    with open("debug.log", "a") as f:
+        f.write(f"[{datetime.datetime.now()}] Checking Profile for {user.get('email', 'unknown')}\n")
+        f.write(f"   Role: {db_user.get('role')}\n")
+        f.write(f"   Profile Completed (DB): {profile_completed}\n")
+
+    if db_user.get("role") == "INDIVIDUAL" and not profile_completed:
+        # Check if patient record actually exists (e.g. created on login or previously)
+        existing_patient = PatientModel.get_by_user(user["_id"])
+        
+        with open("debug.log", "a") as f:
+             f.write(f"   Existing Patient Found: {bool(existing_patient)}\n")
+
+        if existing_patient:
+            # Fix the DB state
+            UserModel.update_profile(
+                 user_id=user["_id"],
+                 profile_data={"profile_completed": True}
+            )
+            profile_completed = True
+            with open("debug.log", "a") as f:
+                 f.write(f"   -> FIXED: Scythe-healed profile_completed to True\n")
+
     return {
         "email": db_user.get("email"),
         "role": db_user.get("role"),
         "profile": db_user.get("profile"),
-        "profile_completed": db_user.get("profile_completed", False),
+        "profile_completed": profile_completed,
         "created_at": db_user.get("created_at")
     }
 

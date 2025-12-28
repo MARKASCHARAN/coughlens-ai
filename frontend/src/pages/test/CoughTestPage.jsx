@@ -7,15 +7,30 @@ import {
     Upload, 
     ChevronLeft, 
     Activity, 
-    CheckCircle2
+    CheckCircle2,
+    Play,
+    Pause,
+    BarChart3
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useVoice } from "../../context/VoiceContext";
 import { useUser } from "../../context/UserContext";
 
+const pageVariants = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1 },
+    exit: { opacity: 0 }
+};
+
+const contentVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0, transition: { delay: 0.2, duration: 0.4 } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+};
+
 export default function CoughTestPage() {
     const navigate = useNavigate();
-    const { startRecording, stopRecording, status, level, setMode, analyzeCough, recordedBlob, lastRecordingId } = useVoice();
+    const { startRecording, stopRecording, status, level, setMode, analyzeCough, recordedBlob, lastRecordingId, setRecordedBlob } = useVoice();
     const { user } = useUser();
     
     // UI steps: 1: Info, 2: Recording, 3: Review, 4: Uploading
@@ -25,13 +40,29 @@ export default function CoughTestPage() {
     const location = useLocation();
     const patientId = location.state?.patientId;
 
+    const handleFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setRecordedBlob(file);
+            setRecordingTime(0); 
+            setStep(3); 
+        }
+    };
+
     // Initial Setup
     useEffect(() => {
         setMode("COUGH_TEST");
-        return () => setMode("COMMAND");
-    }, [setMode]);
+        
+        // Validation for ASHA/CLINICIAN
+        if (user?.role !== "INDIVIDUAL" && !patientId) {
+            alert("Please select a patient from the dashboard before starting a test.");
+            navigate("/dashboard");
+        }
 
-    // Timer Logic relying on status from Context
+        return () => setMode("COMMAND");
+    }, [setMode, user, patientId, navigate]);
+
+    // Timer Logic
     useEffect(() => {
         let interval;
         if (status === "listening") {
@@ -47,23 +78,20 @@ export default function CoughTestPage() {
     const handleStartRecording = () => {
         setStep(2);
         setRecordingTime(0);
-        // Pass patientId if available (for ASHA/Clinician), otherwise null (Individual)
         startRecording(patientId); 
     };
 
     const handleStopRecording = () => {
         stopRecording();
-        setStep(3); // Move to review
+        setStep(3);
     };
 
     const handleUpload = async () => {
         setStep(4);
         const result = await analyzeCough();
         if (result) {
-            // Success
-            navigate(`/reports/${result.report_id || lastRecordingId}`); // Navigate to report
+            navigate(`/reports/${result.report_id || lastRecordingId}`); 
         } else {
-            // Error handling (stay on step 4 or go back)
             alert("Analysis failed. Please try again.");
             setStep(3);
         }
@@ -76,43 +104,89 @@ export default function CoughTestPage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 p-6 flex flex-col items-center justify-center">
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center relative overflow-hidden">
+             {/* Dynamic Background */}
+             <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                <motion.div 
+                    animate={{ 
+                        scale: step === 2 ? 1.2 : 1,
+                        opacity: step === 2 ? 0.6 : 0.3
+                    }}
+                    transition={{ duration: 2 }}
+                    className="absolute -top-[20%] -left-[10%] w-[70vw] h-[70vw] bg-blue-200/40 rounded-full blur-[100px]" 
+                />
+                <motion.div 
+                    animate={{ 
+                        scale: step === 4 ? 1.2 : 1,
+                        opacity: step === 4 ? 0.6 : 0.3
+                    }}
+                    transition={{ duration: 2 }}
+                    className="absolute -bottom-[20%] -right-[10%] w-[70vw] h-[70vw] bg-purple-200/40 rounded-full blur-[100px]" 
+                />
+             </div>
+
              {/* Nav */}
-             <div className="absolute top-8 left-8">
-                 <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
+             <div className="absolute top-8 left-8 z-50">
+                 <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors bg-white/50 backdrop-blur-md px-4 py-2 rounded-xl shadow-sm border border-slate-200/50">
                     <ChevronLeft className="w-5 h-5" />
-                    <span>Cancel Test</span>
+                    <span className="font-medium">Cancel Test</span>
                 </Link>
              </div>
 
-             <div className="w-full max-w-2xl">
+             <div className="w-full max-w-2xl px-6 relative z-10">
                 <AnimatePresence mode="wait">
                     {/* STEP 1: INSTRUCTIONS */}
                     {step === 1 && (
                         <motion.div 
                             key="step1"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-[2rem] p-10 shadow-xl border border-slate-100 text-center"
+                            layoutId="card-container"
+                            variants={pageVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-blue-900/10 border border-white/50 text-center"
                         >
-                            <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mx-auto mb-6">
-                                <Mic className="w-10 h-10" />
-                            </div>
-                            <h1 className="text-3xl font-bold text-slate-900 mb-4">Cough Analysis Test</h1>
-                            <p className="text-slate-500 mb-8 max-w-md mx-auto">
-                                Please record a clear cough sound. Hold the phone 6-10 inches away from your mouth. Ensure you are in a quiet environment.
-                            </p>
-                            
-                            <div className="flex justify-center">
-                                <button 
-                                    onClick={handleStartRecording}
-                                    className="btn-primary px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-lg shadow-blue-600/30 flex items-center gap-3 transition-all hover:scale-105"
-                                >
-                                    <Mic className="w-6 h-6" />
-                                    <span>Start Recording</span>
-                                </button>
-                            </div>
+                            <motion.div variants={contentVariants}>
+                                <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-600 flex items-center justify-center text-white mx-auto mb-8 shadow-lg shadow-blue-500/30">
+                                    <Mic className="w-10 h-10" />
+                                </div>
+                                <h1 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Cough Analysis</h1>
+                                <p className="text-slate-500 mb-10 text-lg leading-relaxed max-w-lg mx-auto">
+                                    Our AI needs a clear recording of your cough sound. Please ensure you are in a quiet environment.
+                                </p>
+                                
+                                <div className="flex flex-col gap-5 items-center max-w-sm mx-auto w-full">
+                                    <button 
+                                        onClick={handleStartRecording}
+                                        className="w-full relative group overflow-hidden px-8 py-5 rounded-2xl bg-slate-900 text-white font-bold text-lg shadow-xl shadow-slate-900/20 transition-all hover:scale-[1.02] hover:shadow-2xl"
+                                    >
+                                        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                        <div className="relative flex items-center justify-center gap-3">
+                                            <div className="p-1 rounded-full bg-white/20">
+                                                <Mic className="w-5 h-5" />
+                                            </div>
+                                            Start Recording
+                                        </div>
+                                    </button>
+                                    
+                                    <div className="flex items-center gap-4 w-full">
+                                        <div className="h-[1px] bg-slate-200 flex-1" />
+                                        <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Or</span>
+                                        <div className="h-[1px] bg-slate-200 flex-1" />
+                                    </div>
+
+                                    <label className="w-full cursor-pointer px-8 py-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 hover:border-slate-300 flex items-center justify-center gap-3 transition-all">
+                                        <Upload className="w-5 h-5 text-slate-400" />
+                                        <span>Upload File</span>
+                                        <input 
+                                            type="file" 
+                                            accept="audio/*" 
+                                            className="hidden" 
+                                            onChange={handleFileUpload}
+                                        />
+                                    </label>
+                                </div>
+                            </motion.div>
                         </motion.div>
                     )}
 
@@ -120,45 +194,50 @@ export default function CoughTestPage() {
                     {step === 2 && (
                         <motion.div 
                             key="step2"
-                            initial={{ opacity: 0, scale: 0.9 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="bg-white rounded-[2rem] p-10 shadow-xl border border-slate-100 text-center relative overflow-hidden"
+                            layoutId="card-container"
+                            variants={pageVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="bg-slate-900 rounded-[2.5rem] p-8 md:p-14 shadow-2xl shadow-blue-900/20 border border-slate-800 text-center relative overflow-hidden w-full"
                         >
-                            {/* Pulse Effect */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-red-50 rounded-full animate-ping opacity-75 pointer-events-none" />
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-red-50 rounded-full animate-pulse opacity-50 pointer-events-none" />
+                             {/* Background Pulse based on Level */}
+                             <motion.div 
+                                animate={{ opacity: 0.1 + (level / 255) * 0.4 }}
+                                className="absolute inset-0 bg-gradient-to-b from-red-500/20 to-purple-500/10 pointer-events-none"
+                             />
 
-                            <div className="relative z-10">
-                                <div className="text-red-500 font-bold mb-2 animate-pulse flex items-center justify-center gap-2">
-                                     <div className="w-3 h-3 rounded-full bg-red-500" />
-                                     RECORDING
+                             <motion.div variants={contentVariants} className="relative z-10">
+                                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-500/20 text-red-400 text-xs font-bold tracking-widest uppercase mb-8 animate-pulse border border-red-500/20">
+                                     <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                                     Recording
                                 </div>
-                                <div className="text-6xl font-mono font-bold text-slate-900 mb-8 tracking-wider">
+                                <div className="text-6xl md:text-7xl font-mono font-bold text-white mb-12 tracking-wider flex justify-center tabular-nums">
                                     {formatTime(recordingTime)}
                                 </div>
                                 
-                                {/* Visualizer Mock based on level */}
-                                <div className="h-24 flex items-center justify-center gap-1 mb-10 w-full max-w-md mx-auto">
-                                    {[...Array(20)].map((_, i) => (
-                                        <div 
+                                {/* Dynamic Wave Visualizer */}
+                                <div className="h-24 md:h-32 flex items-center justify-center gap-1 md:gap-1.5 mb-14 w-full max-w-md mx-auto px-4">
+                                    {[...Array(24)].map((_, i) => (
+                                        <motion.div 
                                             key={i} 
-                                            className="w-2 bg-slate-900 rounded-full transition-all duration-75"
-                                            style={{ 
-                                                height: `${Math.max(20, (level / 255) * 100 * (Math.random() + 0.5))}%`,
-                                            }} 
+                                            className="w-1.5 md:w-2 bg-gradient-to-t from-red-500 to-orange-400 rounded-full"
+                                            animate={{ 
+                                                height: Math.max(8, (level / 255) * 120 * (Math.sin(i * 0.5) + 1.5) * Math.random()) 
+                                            }}
+                                            transition={{ type: "spring", stiffness: 300, damping: 20 }}
                                         />
                                     ))}
                                 </div>
 
                                 <button 
                                     onClick={handleStopRecording}
-                                    className="px-8 py-4 rounded-2xl bg-white border-2 border-slate-200 text-slate-900 font-bold text-lg hover:bg-slate-50 shadow-sm flex items-center gap-3 mx-auto transition-all"
+                                    className="w-full md:w-auto px-10 py-5 rounded-2xl bg-white text-slate-900 font-bold text-lg hover:bg-slate-100 shadow-xl shadow-white/10 flex items-center justify-center gap-3 mx-auto transition-all hover:scale-105"
                                 >
                                     <Square className="w-5 h-5 fill-slate-900" />
                                     <span>Stop Recording</span>
                                 </button>
-                            </div>
+                            </motion.div>
                         </motion.div>
                     )}
 
@@ -166,63 +245,90 @@ export default function CoughTestPage() {
                     {step === 3 && (
                         <motion.div 
                             key="step3"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            className="bg-white rounded-[2rem] p-10 shadow-xl border border-slate-100 text-center"
+                            layoutId="card-container"
+                            variants={pageVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="bg-white/90 backdrop-blur-xl rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-blue-900/10 border border-white/50 text-center"
                         >
-                            <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 mx-auto mb-6">
-                                <CheckCircle2 className="w-10 h-10" />
-                            </div>
-                            <h1 className="text-2xl font-bold text-slate-900 mb-2">Recording Complete</h1>
-                            <p className="text-slate-500 mb-8">Duration: {formatTime(recordingTime)}</p>
-                            
-                            {recordedBlob && (
-                                <audio controls src={URL.createObjectURL(recordedBlob)} className="w-full mb-6" />
-                            )}
+                            <motion.div variants={contentVariants}>
+                                <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-green-600 mx-auto mb-6 shadow-inner">
+                                    <CheckCircle2 className="w-10 h-10" />
+                                </div>
+                                <h1 className="text-3xl font-bold text-slate-900 mb-2">Recording Ready</h1>
+                                <p className="text-slate-500 mb-8 font-mono bg-slate-100 px-3 py-1 rounded-lg inline-block text-sm">
+                                    Duration: {formatTime(recordingTime)}
+                                </p>
+                                
+                                {recordedBlob && (
+                                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-8 max-w-sm mx-auto">
+                                         <audio controls src={URL.createObjectURL(recordedBlob)} className="w-full accent-blue-600" />
+                                    </div>
+                                )}
 
-                            <div className="flex flex-col gap-3 max-w-xs mx-auto">
-                                <button 
-                                    onClick={handleUpload}
-                                    className="px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <Upload className="w-5 h-5" />
-                                    <span>Upload & Analyze</span>
-                                </button>
-                                <button 
-                                    onClick={() => {
-                                        setStep(2); // Go back to recording step
-                                        // Auto start? Maybe not to avoid confusion, just let them press start again or reset to step 1
-                                        setStep(1);
-                                    }} 
-                                    className="px-6 py-3.5 rounded-xl bg-white border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 flex items-center justify-center gap-2 transition-all"
-                                >
-                                    <RotateCcw className="w-5 h-5" />
-                                    <span>Re-record</span>
-                                </button>
-                            </div>
+                                <div className="flex flex-col gap-4 max-w-xs mx-auto">
+                                    <button 
+                                        onClick={handleUpload}
+                                        className="w-full group px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg shadow-lg shadow-blue-600/30 flex items-center justify-center gap-3 transition-all hover:scale-[1.02]"
+                                    >
+                                        <Upload className="w-5 h-5 group-hover:-translate-y-1 transition-transform" />
+                                        <span>Analyze Now</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => {
+                                            setStep(1); 
+                                        }} 
+                                        className="w-full px-8 py-4 rounded-2xl bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 flex items-center justify-center gap-3 transition-all"
+                                    >
+                                        <RotateCcw className="w-5 h-5" />
+                                        <span>Re-record</span>
+                                    </button>
+                                </div>
+                            </motion.div>
                         </motion.div>
                     )}
 
-                    {/* STEP 4: UPLOADING */}
+                    {/* STEP 4: ANALYSIS (RADAR SCAN) */}
                     {step === 4 && (
                         <motion.div 
                             key="step4"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="bg-white rounded-[2rem] p-12 shadow-xl border border-slate-100 text-center w-full max-w-sm"
+                            layoutId="card-container"
+                            variants={pageVariants}
+                            initial="initial"
+                            animate="animate"
+                            exit="exit"
+                            className="bg-slate-900 rounded-[2.5rem] p-12 shadow-2xl shadow-blue-900/20 border border-slate-800 text-center w-full max-w-md relative overflow-hidden"
                         >
-                            <div className="relative w-24 h-24 mx-auto mb-8">
-                                <svg className="animate-spin w-full h-full text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
+                            {/* Scanning Grid Background */}
+                            <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,100,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,100,0.05)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none" />
+                            
+                            {/* Radar Scan Effect */}
+                            <div className="relative w-48 h-48 mx-auto mb-10 rounded-full border border-emerald-500/30 overflow-hidden">
+                                <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-pulse" />
+                                <motion.div 
+                                    animate={{ rotate: 360 }}
+                                    transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                    className="absolute top-1/2 left-1/2 -ml-[50%] -mt-[50%] w-full h-[50%] bg-gradient-to-r from-transparent via-emerald-500/20 to-emerald-500/50 origin-bottom right-0 [clip-path:polygon(50%_100%,100%_0,100%_100%)]"
+                                    style={{ transformOrigin: "50% 100%" }}
+                                />
                                 <div className="absolute inset-0 flex items-center justify-center">
-                                    <Activity className="w-8 h-8 text-blue-600" />
+                                     <Activity className="w-16 h-16 text-emerald-400 drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]" />
                                 </div>
                             </div>
-                            <h2 className="text-xl font-bold text-slate-900 mb-2">Analyzing Audio...</h2>
-                            <p className="text-slate-500 text-sm">Uploading to IPFS & Running inference</p>
+
+                            <h2 className="text-2xl font-bold text-white mb-3 tracking-tight">Analyzing Audio</h2>
+                            <div className="flex flex-col gap-2">
+                                <p className="text-slate-400 text-sm font-mono">Uploading to IPFS...</p>
+                                <div className="h-1 w-32 bg-slate-800 rounded-full mx-auto overflow-hidden">
+                                     <motion.div 
+                                        initial={{ x: "-100%" }}
+                                        animate={{ x: "100%" }}
+                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                        className="h-full bg-emerald-500 w-full"
+                                     />
+                                </div>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>

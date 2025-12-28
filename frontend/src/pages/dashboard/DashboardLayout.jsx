@@ -141,66 +141,65 @@ export default function DashboardLayout() {
 
       </motion.aside>
 
-      {/* Mobile Header - More Colorful */}
-      <div className="md:hidden fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-blue-100/50 px-4 py-3 flex items-center justify-between shadow-[0_4px_20px_-10px_rgba(59,130,246,0.15)]">
-          <div className="flex items-center gap-2">
-             <img src="/ChatGPT Image Dec 19, 2025, 03_38_34 PM.png" alt="CoughLens" className="h-24 w-auto object-contain drop-shadow-sm" /> 
-             {/* Mobile Logo Text Removed as per user preference likely, or keep it if logo is icon only? User said "remove the text of coughlens keep the logo in the middle", assume user meant globally. But mobile header usually needs brand. Let's keep just logo big. */}
+      {/* Mobile Header - Compact & Centered */}
+      <div className="md:hidden fixed top-0 w-full z-50 bg-white/90 backdrop-blur-xl border-b border-blue-100/50 h-16 flex items-center px-4 shadow-sm">
+          {/* Centered Logo */}
+          <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center">
+             <img src="/ChatGPT Image Dec 19, 2025, 03_38_34 PM.png" alt="CoughLens" className="h-12 w-auto object-contain drop-shadow-sm" /> 
           </div>
-          <button onClick={() => setIsMobileMenuOpen(true)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 shadow-sm active:scale-95 transition-transform border border-blue-100">
-              <Menu className="w-7 h-7" />
+          
+          {/* Menu Button (Right Aligned) */}
+          <button onClick={() => setIsMobileMenuOpen(true)} className="ml-auto p-2 rounded-xl bg-blue-50 text-blue-600 shadow-sm active:scale-95 transition-transform border border-blue-100">
+              <Menu className="w-5 h-5" />
           </button>
       </div>
 
-     {/* Mobile Menu - Enhanced Parity & Visuals */}
+     {/* Mobile Menu - Enhanced Compact Design */}
      <AnimatePresence>
         {isMobileMenuOpen && (
             <motion.div 
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm md:hidden"
+                className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm md:hidden"
                 onClick={() => setIsMobileMenuOpen(false)}
             >
                 <motion.div 
                     initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }}
-                    transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                    className="absolute right-0 top-0 h-full w-[85%] max-w-xs bg-gradient-to-br from-white via-white to-blue-50 p-6 rounded-l-[2.5rem] shadow-2xl overflow-y-auto border-l border-white/50"
+                    transition={{ type: "spring", damping: 30, stiffness: 300 }}
+                    className="absolute right-0 top-0 h-full w-[280px] bg-white p-5 shadow-2xl overflow-y-auto border-l border-slate-100 flex flex-col"
                     onClick={e => e.stopPropagation()}
                 >
-                    <div className="flex justify-between items-center mb-8">
-                         <div className="flex items-center gap-2">
-                            <img src="/ChatGPT Image Dec 19, 2025, 03_38_34 PM.png" alt="Logo" className="h-30 w-auto object-contain" />
-                         </div>
-                         <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full bg-white shadow-sm text-slate-400 active:scale-90 transition-transform hover:text-red-500">
-                             <X className="w-6 h-6" />
+                    <div className="flex justify-between items-center mb-8 px-2">
+                         <span className="font-bold text-lg text-slate-900">Menu</span>
+                         <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 rounded-full bg-slate-50 text-slate-400 hover:text-slate-900 active:scale-95 transition-all">
+                             <X className="w-5 h-5" />
                          </button>
                     </div>
 
-                    {/* Mobile Profile Card */}
-                    <div className="bg-gradient-to-r from-blue-50 to-white p-4 rounded-2xl shadow-[0_2px_10px_rgba(59,130,246,0.05)] border border-blue-100 mb-8 flex items-center gap-4">
-                         <div className="w-12 h-12 rounded-full bg-white p-0.5 shadow-sm">
+                    {/* Compact Profile */}
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 mb-6">
+                         <div className="w-10 h-10 rounded-full bg-white p-0.5 shadow-sm shrink-0">
                              <img 
                                 src={`https://api.dicebear.com/7.x/notionists/svg?seed=${user?.phone || "User"}`} 
                                 alt="User" 
                                 className="w-full h-full object-cover rounded-full"
                              />
                          </div>
-                         <div>
-                             <p className="font-bold text-base text-slate-900">{user?.phone || "User"}</p>
-                             <p className="text-[10px] font-extrabold text-blue-600 bg-blue-100/50 px-2 py-0.5 rounded-full inline-block mt-1 tracking-wide">{role.replace("_", " ")}</p>
+                         <div className="min-w-0">
+                             <p className="font-bold text-sm text-slate-900 truncate">{user?.phone || "User"}</p>
+                             <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{role.replace("_", " ")}</p>
                          </div>
                     </div>
 
-                    <nav className="space-y-2">
+                    <nav className="space-y-1 flex-1">
                         {/* Main Nav Items */}
                         {navItems.map((item, index) => (
                              <MobileAnimLink key={item.to} index={index} to={item.to} icon={item.icon} label={item.label} location={location} close={() => setIsMobileMenuOpen(false)} />
                         ))}
-
                     </nav>
 
-                    <div className="mt-8 pt-6 border-t border-slate-100">
-                         <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-red-500 font-bold bg-red-50/50 hover:bg-red-50 transition-colors">
-                             <LogOut className="w-5 h-5" />
+                    <div className="mt-6 pt-6 border-t border-slate-100">
+                         <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-500 font-bold hover:bg-red-50 transition-colors text-sm">
+                             <LogOut className="w-4 h-4" />
                              Logout
                          </button>
                     </div>
@@ -239,16 +238,16 @@ function MobileAnimLink({ index, to, icon, label, location, close }) {
         <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 + index * 0.05 }}
+            transition={{ delay: 0.05 + index * 0.03 }}
         >
             <Link 
             to={to} 
             onClick={close}
             className={cn(
-                "flex items-center gap-4 px-4 py-4 rounded-2xl font-bold transition-all border border-transparent",
+                "flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-sm transition-all",
                 active
-                    ? "bg-blue-600 text-white shadow-lg shadow-blue-500/30 ring-4 ring-blue-100"
-                    : "text-slate-500 hover:bg-white hover:shadow-sm hover:border-slate-100 hover:text-blue-600"
+                    ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
             )}
             >
                 {icon}

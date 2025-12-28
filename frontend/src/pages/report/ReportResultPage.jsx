@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { 
     Download, 
     Share2, 
@@ -10,175 +10,201 @@ import {
     Activity,
     Info
 } from "lucide-react";
-import { motion } from "framer-motion";
+
 import { useUser } from "../../context/UserContext";
+import { reportsService } from "../../services/reports";
 
 export default function ReportResultPage() {
     const { id } = useParams();
     const { user } = useUser();
-    const role = user?.role || "INDIVIDUAL";
-    const navigate = useNavigate();
 
-    // Mock Result Data - in real app fetch by ID
-    const result = {
-        id: id || "REP-2024-001",
-        patientName: "Ramesh Kumar",
-        patientPhone: "9999999999", // Added for verification
-        date: "Dec 20, 2024",
-        diagnosis: "Pneumonia",
-        probability: "High",
-        confidence: 92,
-        severity: "Critical",
-        advice: [
-            "Immediate consultation with a specialist is recommended.",
-            "Monitor oxygen saturation levels regularly.",
-            "Isolate the patient to prevent potential spread if infectious."
-        ]
-    };
+    const [result, setResult] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    const isHighRisk = result.severity === "Critical" || result.severity === "High";
-
-    // Access Control
+    // Fetch Report Data
     useEffect(() => {
-        if (role === "INDIVIDUAL") {
-            // Check if report belongs to user
-            // In real app, this check happens on backend or finding no match in user's report list
-            // Here we use mock phone check. 
-            // If user.phone is not set (e.g. dev mode), allow or block. 
-            // Blocking for security demo.
-            if (user?.phone && result.patientPhone !== user.phone && result.patientPhone !== "9999999999") { // Allow strict match or demo match
-                 // If not match, redirect
-                 // For hackathon ease, let's say if it doesn't match '9999999999' which is the mock report, 
-                 // AND it fails exact match. 
-                 // Actually better: If INDIVIDUAL, and accessing a report ID not in THEIR list.
-                 // For now, simple redirect if logic fails.
-                 // navigate("/dashboard");
+        const fetchReport = async () => {
+            if (!id) return;
+            setLoading(true);
+            try {
+                const data = await reportsService.getReportById(id);
+                setResult(data);
+            } catch (err) {
+                console.error("Failed to fetch report", err);
+                setError("Failed to load report");
+            } finally {
+                setLoading(false);
             }
-        }
-    }, [role, user, navigate, result.patientPhone]);
+        };
+        fetchReport();
+    }, [id]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full" />
+            </div>
+        );
+    }
+
+    if (error || !result) {
+         return (
+            <div className="min-h-screen flex items-center justify-center bg-slate-50 flex-col gap-4">
+                <p className="text-slate-500">{error || "Report not found"}</p>
+                 <Link to="/dashboard" className="text-blue-600 font-bold hover:underline">Return to Dashboard</Link>
+            </div>
+        );
+    }
     
-    // Note: The above effect is a bit "loose" because of mock data. 
-    // Ideally we fetch report, if 403/404 then redirect.
+    // Derived state for UI
+    const predictionNormalized = result.prediction?.toLowerCase() || "";
+    const isHealthy = predictionNormalized === "healthy";
+    const isHighRisk = !isHealthy; 
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-20">
+        <div className="min-h-screen bg-slate-50/30 pb-20 font-sans">
             {/* Header / Nav */}
-            <div className="bg-white border-b border-slate-200 sticky top-0 z-10 px-6 py-4 flex items-center justify-between">
-                <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
-                    <ChevronLeft className="w-5 h-5" />
-                    <span>Back to Dashboard</span>
+            <div className="bg-white border-b border-slate-200 sticky top-0 z-20 px-8 py-4 flex items-center justify-between shadow-sm">
+                <Link to="/dashboard" className="flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors group">
+                    <div className="p-2 rounded-full bg-slate-100 group-hover:bg-slate-200 transition-colors">
+                         <ChevronLeft className="w-4 h-4" />
+                    </div>
+                    <span className="font-medium text-sm">Back to Dashboard</span>
                 </Link>
-                <div className="font-mono text-sm text-slate-400">ID: {result.id}</div>
+                <div className="flex items-center gap-4">
+                     <div className="text-right hidden md:block">
+                        <div className="text-xs font-bold text-slate-400 uppercase tracking-widest">Report ID</div>
+                        <div className="font-mono text-sm font-medium text-slate-600">{result.id}</div>
+                     </div>
+                </div>
             </div>
 
-            <div className="max-w-4xl mx-auto p-6 space-y-8 mt-4">
+            <div className="max-w-4xl mx-auto p-6 space-y-8 mt-6">
                 
-                {/* Main Result Card */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-[2.5rem] p-8 md:p-12 shadow-xl border border-slate-100 text-center overflow-hidden relative"
-                >
-                    {/* Background Gradient */}
-                    <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${isHighRisk ? 'from-red-500 to-orange-500' : 'from-green-500 to-emerald-500'}`} />
-                    
-                    <div className="mb-8">
-                        <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ${isHighRisk ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'}`}>
-                            {isHighRisk ? <AlertTriangle className="w-12 h-12" /> : <CheckCircle2 className="w-12 h-12" />}
+                {/* Patient Info Header */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-slate-100 pb-6 mb-6">
+                        <div>
+                            <h1 className="text-2xl font-bold text-slate-900 mb-1">Diagnostic Report</h1>
+                            <p className="text-slate-500 text-sm">Generated on {result.createdAt ? new Date(result.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}</p>
                         </div>
-                        <h2 className="text-slate-500 font-medium mb-2 uppercase tracking-wide text-sm">Analysis Result</h2>
-                        <h1 className={`text-4xl md:text-5xl font-bold mb-4 ${isHighRisk ? 'text-slate-900' : 'text-slate-900'}`}>
-                            {result.diagnosis} Detected
-                        </h1>
-                         <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold ${isHighRisk ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                            <Activity className="w-4 h-4" />
-                            {result.confidence}% Confidence
+                        <div className="bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
+                             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Organization</div>
+                             <div className="font-semibold text-slate-700 flex items-center gap-2">
+                                <Activity className="w-4 h-4 text-blue-600" />
+                                CoughLens AI Diagnostics
+                             </div>
                         </div>
-                    </div>
+                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-8 py-8 border-t border-slate-100">
-                         <div>
-                            <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Severity</div>
-                            <div className={`text-xl font-bold ${isHighRisk ? 'text-red-600' : 'text-green-600'}`}>{result.severity}</div>
-                         </div>
-                         <div>
-                            <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Risk Level</div>
-                            <div className="text-xl font-bold text-slate-700">{result.probability}</div>
-                         </div>
-                         <div>
-                            <div className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">Processing Time</div>
-                            <div className="text-xl font-bold text-slate-700">1.2s</div>
-                         </div>
-                    </div>
-                </motion.div>
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                        <div>
+                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Patient Details</h3>
+                             <div className="space-y-3">
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Name</span>
+                                    <span className="font-medium text-slate-900">{user?.name || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Email</span>
+                                    <span className="font-medium text-slate-900">{user?.email || "N/A"}</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Patient ID</span>
+                                    <span className="font-mono text-sm font-medium text-slate-900">{user?._id?.substring(0,8) || "Unknown"}</span>
+                                </div>
+                             </div>
+                        </div>
+                        <div>
+                             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Clinical Context</h3>
+                             <div className="space-y-3">
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Symptom Reported</span>
+                                    <span className="font-medium text-slate-900">Chronic Cough</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Analysis Type</span>
+                                    <span className="font-medium text-slate-900">Audio Spectral Analysis</span>
+                                </div>
+                                <div className="flex justify-between border-b border-slate-50 pb-2">
+                                    <span className="text-slate-500 text-sm">Model Version</span>
+                                    <span className="font-mono text-sm font-medium text-slate-900">v2.1.0-beta</span>
+                                </div>
+                             </div>
+                        </div>
+                     </div>
+                </div>
 
-                {/* Content Grid */}
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Visualizer Card */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.1 }}
-                        className="bg-slate-900 rounded-[2rem] p-8 text-white relative overflow-hidden"
-                    >
-                         <h3 className="font-bold text-lg mb-6 flex items-center gap-2">
-                            <Activity className="w-5 h-5 text-blue-400" />
-                            Audio Spectrogram
-                         </h3>
-                         {/* Mock Spectrogram */}
-                         <div className="h-40 flex items-end gap-1 opacity-80">
-                            {[...Array(40)].map((_, i) => (
-                                <div 
-                                    key={i} 
-                                    className="flex-1 bg-gradient-to-t from-blue-600 to-cyan-400 rounded-t-sm"
-                                    style={{ height: `${20 + Math.random() * 80}%` }} 
-                                />
-                            ))}
-                         </div>
-                         <div className="mt-4 flex justify-between text-xs text-slate-500 font-mono">
-                            <span>0:00</span>
-                            <span>0:05</span>
-                         </div>
-                    </motion.div>
+                {/* Main Result */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                     <div className="p-6 md:p-8 bg-slate-50/50 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-6">
+                        <div className="flex items-center gap-4">
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center ${isHighRisk ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                {isHighRisk ? <ShieldAlert className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                            </div>
+                            <div>
+                                <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">Primary Finding</h2>
+                                <div className={`text-3xl font-bold ${isHighRisk ? 'text-slate-900' : 'text-slate-900'}`}>{result.prediction}</div>
+                            </div>
+                        </div>
+                     </div>
 
-                    {/* Advice Card */}
-                    <motion.div 
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.2 }}
-                        className="bg-white rounded-[2rem] p-8 border border-slate-100 shadow-sm"
-                    >
-                        <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-900">
-                            <Info className="w-5 h-5 text-blue-600" />
-                            Clinical Advice
-                         </h3>
-                         <ul className="space-y-4">
-                            {result.advice.map((item, i) => (
-                                <li key={i} className="flex gap-3 text-slate-600 leading-relaxed">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2.5 flex-shrink-0" />
-                                    {item}
-                                </li>
-                            ))}
-                         </ul>
-                    </motion.div>
+                     <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                         <div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Severity</div>
+                            <div className={`text-xl font-bold ${isHighRisk ? 'text-red-600' : 'text-emerald-600'}`}>{result.severity || "N/A"}</div>
+                            <p className="text-xs text-slate-400 mt-1">Based on audio intensity frequency</p>
+                         </div>
+                         <div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Risk Level</div>
+                            <div className="text-xl font-bold text-slate-700">{result.probability || "Low"}</div>
+                            <p className="text-xs text-slate-400 mt-1">Assessment of potential health risk</p>
+                         </div>
+                         <div>
+                            <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Status</div>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isHighRisk ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                                {isHighRisk ? "Action Required" : "Normal Limits"}
+                            </span>
+                         </div>
+                     </div>
+                </div>
+
+                {/* Recommendations */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 md:p-8">
+                    <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-slate-900">
+                        <Info className="w-5 h-5 text-blue-600" />
+                        Clinical Recommendations
+                     </h3>
+                     <ul className="space-y-4">
+                        {(result.advice || ["Consult a healthcare provider for further assessment.", "Monitor symptoms closely."]).map((item, i) => (
+                            <li key={i} className="flex gap-4 text-slate-600 leading-relaxed border-b border-slate-50 last:border-0 pb-4 last:pb-0">
+                                <span className="font-bold text-blue-600 text-sm mt-0.5">{i + 1}.</span>
+                                <span className="text-sm md:text-base">{item}</span>
+                            </li>
+                        ))}
+                     </ul>
+                </div>
+
+                {/* Disclaimer */}
+                <div className="bg-amber-50 rounded-lg p-4 border border-amber-100 flex gap-3 text-amber-800 text-xs md:text-sm">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <p>
+                        <strong>Disclaimer:</strong> This report is generated by an AI model and is for informational purposes only. It is not a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.
+                    </p>
                 </div>
 
                 {/* Action Bar */}
-                <motion.div 
-                     initial={{ opacity: 0, y: 20 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     transition={{ delay: 0.3 }}
-                     className="flex flex-col md:flex-row gap-4 justify-center pt-8"
-                >
-                    <button className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-slate-900 text-white font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20">
-                        <Download className="w-5 h-5" />
+                <div className="flex flex-col md:flex-row gap-4 justify-end pt-4">
+                    <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-white border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm text-sm">
+                        <Download className="w-4 h-4" />
                         Download Report PDF
                     </button>
-                     <button className="flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-all shadow-lg shadow-green-500/20">
-                        <Share2 className="w-5 h-5" />
-                        Share on WhatsApp
+                     <button className="flex items-center justify-center gap-2 px-6 py-3 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition-all shadow-md text-sm">
+                        <Share2 className="w-4 h-4" />
+                        Share Results
                     </button>
-                </motion.div>
+                </div>
 
             </div>
         </div>

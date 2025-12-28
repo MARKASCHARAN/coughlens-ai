@@ -8,12 +8,6 @@ import { patientService } from "../../services/patients";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 
-// Initial Mock Data (Fallback)
-const INITIAL_MOCK_PATIENTS = [
-    { id: 101, name: "Ramesh Kumar", age: 65, gender: "Male", village: "Sector 4", lastTest: "2h ago", status: "High Risk", riskScore: 85 },
-    { id: 102, name: "Sunita Devi", age: 42, gender: "Female", village: "Sector 2", lastTest: "1d ago", status: "Normal", riskScore: 12 },
-];
-
 export default function PatientListPage() {
     const { user } = useUser();
     const role = user?.role || "INDIVIDUAL";
@@ -27,49 +21,49 @@ export default function PatientListPage() {
     }, [role, navigate]);
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [patients, setPatients] = useState(INITIAL_MOCK_PATIENTS);
+    const [patients, setPatients] = useState([]);
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
     // Form State
     const [newPatient, setNewPatient] = useState({ name: "", age: "", gender: "MALE" });
 
+    // Fetch Patients
+    useEffect(() => {
+        if (role !== "INDIVIDUAL") {
+            const fetchPatients = async () => {
+                try {
+                    const data = await patientService.getPatients();
+                    if (Array.isArray(data)) {
+                        setPatients(data);
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch patients", err);
+                }
+            };
+            fetchPatients();
+        }
+    }, [role]);
+
     const filteredPatients = patients.filter(p => 
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        (p.village && p.village.toLowerCase().includes(searchQuery.toLowerCase()))
+        (p.name?.toLowerCase() || "").includes(searchQuery.toLowerCase()) || 
+        (p.village?.toLowerCase() || "").includes(searchQuery.toLowerCase()) ||
+        (p._id?.toLowerCase() || "").includes(searchQuery.toLowerCase())
     );
 
     const handleCreatePatient = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            // Call API
-            // const res = await patientService.createPatient({ ...newPatient, age: Number(newPatient.age) });
-            // For now, mock add to list as backend might not be fully ready or connected
-            // Using mock logic to simulate immediate UI feedback
-            const mockId = Math.floor(Math.random() * 1000) + 200;
-            const newP = {
-                id: mockId, // use res._id in real app
-                name: newPatient.name,
-                age: newPatient.age,
-                gender: newPatient.gender,
-                village: "New Entry", // Default
-                lastTest: "New",
-                status: "Pending",
-                riskScore: 0
-            };
-            
-            setPatients(prev => [newP, ...prev]);
+            const res = await patientService.createPatient({ ...newPatient, age: Number(newPatient.age) });
+            // Add to list immediately
+            setPatients(prev => [res, ...prev]);
             setIsAddModalOpen(false);
             setNewPatient({ name: "", age: "", gender: "MALE" });
-            
-            // In real integration:
-            // await patientService.createPatient(newP); 
-            // And maybe navigate to profile or just close modal?
-            // Guide says: Response { _id: "..." }
-            
+            alert("Patient created successfully!");
         } catch (err) {
             console.error("Failed to create patient", err);
+            alert("Failed to create patient");
         } finally {
             setLoading(false);
         }
@@ -133,36 +127,36 @@ export default function PatientListPage() {
                         </thead>
                         <tbody>
                             {filteredPatients.map((patient) => (
-                                <tr key={patient.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group">
+                                <tr key={patient._id || patient.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors group">
                                     <td className="p-6">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-sm">
-                                                {patient.name.charAt(0)}
+                                                {(patient.name || "U").charAt(0)}
                                             </div>
                                             <div>
-                                                <div className="font-semibold text-slate-900">{patient.name}</div>
+                                                <div className="font-semibold text-slate-900">{patient.name || "Unknown"}</div>
                                                 <div className="text-xs text-slate-500 md:hidden">{patient.age} yrs • {patient.gender}</div>
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-6 text-sm text-slate-600">
-                                        <div className="font-medium">#{patient.id}</div>
+                                        <div className="font-medium">#{(patient._id || "").substring(0,6)}</div>
                                         <div className="text-xs text-slate-400">{patient.age} yrs • {patient.gender}</div>
                                     </td>
-                                    <td className="p-6 text-sm text-slate-600">{patient.village}</td>
+                                    <td className="p-6 text-sm text-slate-600">{patient.village || "N/A"}</td>
                                     <td className="p-6">
                                         <span className={cn(
                                             "inline-flex px-2.5 py-1 rounded-full text-xs font-semibold",
                                             patient.status === "High Risk" && "bg-red-100 text-red-700",
                                             patient.status === "Moderate" && "bg-orange-100 text-orange-700",
-                                            (patient.status === "Normal" || patient.status === "Pending") && "bg-green-100 text-green-700"
+                                            (!patient.status || patient.status === "Normal" || patient.status === "Pending") && "bg-green-100 text-green-700"
                                         )}>
-                                            {patient.status}
+                                            {patient.status || "Pending"}
                                         </span>
                                     </td>
-                                    <td className="p-6 text-sm text-slate-500">{patient.lastTest}</td>
+                                    <td className="p-6 text-sm text-slate-500">{patient.lastTest || "None"}</td>
                                     <td className="p-6 text-right">
-                                        <Link to={`/dashboard/patients/${patient.id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors">
+                                        <Link to={`/dashboard/patients/${patient._id}`} className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-white border border-slate-200 text-slate-400 hover:text-blue-600 hover:border-blue-200 transition-colors">
                                             <ChevronRight className="w-5 h-5" />
                                         </Link>
                                     </td>

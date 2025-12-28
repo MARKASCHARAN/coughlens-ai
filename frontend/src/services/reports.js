@@ -13,6 +13,11 @@ export const reportsService = {
         return response.data;
     },
 
+    getReportById: async (reportId) => {
+        const response = await api.get(`/reports/${reportId}`);
+        return response.data;
+    },
+
     shareReportWhatsApp: async (reportId, phone) => {
         const response = await api.post('/reports/share/whatsapp', null, {
             params: { report_id: reportId, phone }

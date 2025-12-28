@@ -5,26 +5,40 @@ const UserContext = createContext(null);
 
 export function UserProvider({ children }) {
     const [user, setUser] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true); // Check storage before deciding not logged in
     const [authStep, setAuthStep] = useState("EMAIL"); // EMAIL | OTP
 
     useEffect(() => {
         // Check for existing token on load
         const token = localStorage.getItem("access_token");
         const storedRole = localStorage.getItem("role");
+        
         if (token && storedRole) {
-            // Optimistically set basic user
-            setUser({ role: storedRole, token });
+            // Already loading
             
             // Fetch fresh data
             authService.getProfile()
                 .then(data => {
-                    setUser(prev => ({ ...prev, ...data }));
+                    // Only set user once we have full profile data (including profile_completed)
+                    setUser({ role: storedRole, token, ...data });
                 })
                 .catch(err => {
                     console.error("Failed to restore session", err);
-                    // Optionally logout if 401?
+                    // Fallback: if 401, likely expired. But for now keep behavior or logout.
+                    // If error is 401, logout?
+                    if (err.response && err.response.status === 401) {
+                         localStorage.removeItem("access_token");
+                         localStorage.removeItem("role");
+                         setUser(null);
+                    } else {
+                        setUser({ role: storedRole, token });
+                    }
+                })
+                .finally(() => {
+                    setIsLoading(false); // Stop loading regardless of success/fail
                 });
+        } else {
+             setIsLoading(false); // No token, ready to render
         }
     }, []);
 
@@ -52,18 +66,23 @@ export function UserProvider({ children }) {
                 localStorage.setItem("access_token", data.access_token);
                 localStorage.setItem("role", data.role);
 
-                let fullUser = { role: data.role, token: data.access_token };
+                // Use the profile_completed flag from backend if available
+                let fullUser = { 
+                    role: data.role, 
+                    token: data.access_token,
+                    profile_completed: data.profile_completed 
+                };
                 
                 // Fetch full profile immediately
                 try {
                      const profileData = await authService.getProfile();
-                     fullUser = { ...profileData, token: data.access_token, role: data.role };
-                     setUser(fullUser);
+                     // Merge, allowing backend profile record to override if needed
+                     fullUser = { ...fullUser, ...profileData };
                 } catch (e) {
                      console.warn("Could not fetch profile on login", e);
-                     setUser(fullUser);
                 }
 
+                setUser(fullUser);
                 return fullUser;
             }
             return false;

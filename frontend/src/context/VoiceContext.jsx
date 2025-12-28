@@ -162,17 +162,29 @@ export function VoiceProvider({ children }) {
         }
         setStatus("processing");
         try {
-            const uploadRes = await audioService.uploadAudio(recordedBlob);
-            if (uploadRes.path) {
-                const inferRes = await mlService.inferCough(currentPatientId, uploadRes.path);
-                setLastRecordingId(inferRes.report_id);
-                setLastAction("SHOW_RESULT");
-                setStatus("idle");
-                setMode("COMMAND"); 
-                return inferRes;
-            }
+            // 🚀 DIRECT INFERENCE (No upload step)
+            // Backend endpoint: /ml/infer/direct
+            const inferRes = await mlService.inferCoughDirect(recordedBlob, currentPatientId);
+            
+            // Backend returns: { prediction, confidence, report: { _id: "..." } }
+            const reportId = inferRes.report?._id || inferRes.report?.id; // Robust ID check
+            
+            setLastRecordingId(reportId);
+            setLastAction("SHOW_RESULT");
+            setStatus("idle");
+            setMode("COMMAND"); 
+            
+            // Return enhanced object for UI
+            return { ...inferRes, report_id: reportId };
+            
         } catch (err) {
-            console.error("Analysis failed", err);
+            console.error("Analysis failed:", err);
+            if (err.response) {
+                console.error("Server Error Details:", err.response.data);
+                if (err.response.status === 400 && err.response.data?.detail === "Patient profile not found") {
+                    alert("Patient profile not found. Please complete your profile.");
+                }
+            }
             setStatus("error");
             return null;
         }
@@ -210,6 +222,7 @@ export function VoiceProvider({ children }) {
             setMode,
             lastAction,
             recordedBlob,
+            setRecordedBlob, // Exported for manual upload
             analyzeCough
         }}>
             {children}

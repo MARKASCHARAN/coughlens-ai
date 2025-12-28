@@ -13,7 +13,8 @@ from app.api.auth.whatsapp_routes import router as whatsapp_auth_router
 from app.api.auth.profile_routes import router as profile_router
 from app.api.auth.email_routes import router as email_router
 from app.api.patients.patient_routes import router as patient_router
-
+from app.api.audio.audio_check_routes import router as audio_check_router
+from app.api.ml.inference_direct_routes import router as inference_direct_router
 
 
 
@@ -41,6 +42,8 @@ app.include_router(whatsapp_auth_router)
 app.include_router(profile_router)
 app.include_router(email_router)
 app.include_router(patient_router)
+app.include_router(audio_check_router)  
+app.include_router(inference_direct_router)
 
 @app.get("/")
 def root():

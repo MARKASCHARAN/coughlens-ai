@@ -12,6 +12,7 @@ class AnalyticsService:
         return {
             "total_tests": len(reports),
             "high_risk": len([r for r in reports if r["prediction"] != "HEALTHY"]),
+            "reports": reports  # 👈 Added this
         }
 
     @staticmethod

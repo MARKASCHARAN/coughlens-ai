@@ -1,5 +1,3 @@
-# app/api/auth/email_routes.py
-
 from fastapi import APIRouter, HTTPException
 from app.services.otp_service import OTPService
 from app.services.email_service import EmailService
@@ -10,13 +8,13 @@ from app.core.security import create_access_token
 router = APIRouter(prefix="/auth/email", tags=["Auth"])
 
 
-# ======================================
+# =========================
 # REQUEST EMAIL OTP
-# ======================================
+# =========================
 @router.post("/request")
 def request_email_otp(email: str, role: str):
     if role not in ["INDIVIDUAL", "ASHA_WORKER", "CLINICIAN"]:
-        raise HTTPException(status_code=400, detail="Invalid role")
+        raise HTTPException(400, "Invalid role")
 
     otp = OTPService.generate_otp()
 
@@ -32,9 +30,9 @@ def request_email_otp(email: str, role: str):
     return {"status": "OTP_SENT"}
 
 
-# ======================================
-# VERIFY EMAIL OTP + LOGIN
-# ======================================
+# =========================
+# VERIFY EMAIL OTP
+# =========================
 @router.post("/verify")
 def verify_email_otp(email: str, otp: str):
     record = OTPService.verify_otp(
@@ -44,26 +42,29 @@ def verify_email_otp(email: str, otp: str):
     )
 
     if not record:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired OTP"
-        )
+        raise HTTPException(401, "Invalid or expired OTP")
 
-    # 🔐 Create or fetch user
+    # Create or fetch user
     user = UserModel.get_or_create_email_user(
-        email=email,
+        email=email.strip().lower(),
         role=record["role"]
     )
 
-    # ======================================
-    # 🧑‍🦱 AUTO-CREATE PATIENT (INDIVIDUAL ONLY)
-    # ======================================
+    # Auto patient for INDIVIDUAL
+    profile_completed = user.get("profile_completed", False)
+
     if user["role"] == "INDIVIDUAL":
-        existing_patient = PatientModel.get_by_user(user["_id"])
-        if not existing_patient:
+        patient = PatientModel.get_by_user(user["_id"])
+        if not patient:
             PatientModel.create_self_patient(user["_id"])
 
-    # 🔑 Create JWT
+        if not profile_completed:
+            UserModel.update_profile(
+                user_id=user["_id"],
+                profile_data={"profile_completed": True}
+            )
+            profile_completed = True
+
     token = create_access_token({
         "sub": user["_id"],
         "role": user["role"]
@@ -72,5 +73,6 @@ def verify_email_otp(email: str, otp: str):
     return {
         "access_token": token,
         "token_type": "bearer",
-        "role": user["role"]
+        "role": user["role"],
+        "profile_completed": profile_completed
     }
